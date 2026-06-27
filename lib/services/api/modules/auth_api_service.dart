@@ -9,6 +9,7 @@ class AuthApiService {
   Future<AuthLoginResult> login({
     required String email,
     required String password,
+    String? newPassword,
     String? fcmToken,
     String? deviceType,
   }) async {
@@ -17,11 +18,33 @@ class AuthApiService {
       body: _withoutNulls({
         'email': email.trim(),
         'password': password,
+        'newPassword': newPassword,
         'fcmToken': fcmToken,
         'deviceType': deviceType,
       }),
     );
 
+    return _parseLoginResult(data);
+  }
+
+  Future<AuthLoginResult> loginWithGoogle({
+    required String idToken,
+    String? fcmToken,
+    String? deviceType,
+  }) async {
+    final data = await _apiClient.post(
+      '/auth/google',
+      body: _withoutNulls({
+        'idToken': idToken,
+        'fcmToken': fcmToken,
+        'deviceType': deviceType,
+      }),
+    );
+
+    return _parseLoginResult(data);
+  }
+
+  AuthLoginResult _parseLoginResult(Object? data) {
     final payload = data as Map<String, dynamic>;
     if (payload['requiresPasswordChange'] == true) {
       return PasswordChangeRequiredLoginResult.fromJson(payload);
