@@ -1,49 +1,128 @@
 import 'package:flutter/material.dart';
 
 import '../../models/auth_models.dart';
-import '../shared/role_dashboard_shell.dart';
+import '../../services/api/modules/admin_api_service.dart';
+import 'admin_document_moderation_page.dart';
+import 'admin_overview_page.dart';
+import 'admin_schools_page.dart';
+import 'widgets/admin_common.dart';
 
-class AdminDashboardPage extends StatelessWidget {
+class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({
     super.key,
     required this.session,
+    required this.adminApi,
     required this.onLogout,
   });
 
   final AuthSession session;
+  final AdminApiService adminApi;
   final Future<void> Function() onLogout;
 
   @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  int _selectedIndex = 0;
+
+  @override
   Widget build(BuildContext context) {
-    return RoleDashboardShell(
-      session: session,
-      onLogout: onLogout,
-      title: 'Admin',
-      subtitle: 'Không gian quản trị học vụ',
-      icon: Icons.admin_panel_settings_outlined,
-      accentColor: const Color(0xFF38BDF8),
-      items: const [
-        RoleDashboardItem(
-          icon: Icons.school_outlined,
-          title: 'Danh mục trường',
-          subtitle: 'Quản lý trường, ngành học và dữ liệu danh mục.',
+    final pages = [
+      AdminOverviewPage(
+        api: widget.adminApi,
+        adminName: widget.session.user.fullName,
+        onOpenSchools: () => _selectTab(1),
+        onOpenModeration: () => _selectTab(2),
+      ),
+      AdminSchoolsPage(api: widget.adminApi),
+      AdminDocumentModerationPage(api: widget.adminApi),
+    ];
+
+    return Theme(
+      data: buildAdminLightTheme(),
+      child: Scaffold(
+        backgroundColor: adminBackground,
+        appBar: AppBar(
+          titleSpacing: 18,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'UniBuddy',
+                style: TextStyle(
+                  color: adminPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              Text(
+                widget.session.user.email,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: adminMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'Đăng xuất',
+              onPressed: widget.onLogout,
+              icon: const Icon(Icons.logout),
+            ),
+          ],
         ),
-        RoleDashboardItem(
-          icon: Icons.description_outlined,
-          title: 'Tài liệu',
-          subtitle: 'Kiểm duyệt tài liệu và báo cáo vi phạm.',
+        body: IndexedStack(index: _selectedIndex, children: pages),
+        bottomNavigationBar: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: adminSurface,
+            indicatorColor: adminPrimary.withValues(alpha: 0.12),
+            iconTheme: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return IconThemeData(color: selected ? adminPrimary : adminMuted);
+            }),
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 11,
+                color: selected ? adminText : adminMuted,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+              );
+            }),
+          ),
+          child: NavigationBar(
+            height: adminIsCompact(context) ? 66 : 74,
+            selectedIndex: _selectedIndex,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            onDestinationSelected: _selectTab,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.dashboard_outlined),
+                selectedIcon: Icon(Icons.dashboard),
+                label: 'Tổng quan',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.school_outlined),
+                selectedIcon: Icon(Icons.school),
+                label: 'Trường',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.description_outlined),
+                selectedIcon: Icon(Icons.description),
+                label: 'Tài liệu',
+              ),
+            ],
+          ),
         ),
-        RoleDashboardItem(
-          icon: Icons.groups_2_outlined,
-          title: 'Người dùng',
-          subtitle: 'Theo dõi sinh viên và tài khoản được phân quyền.',
-        ),
-        RoleDashboardItem(
-          icon: Icons.fact_check_outlined,
-          title: 'Quy chế',
-          subtitle: 'Quản lý thang điểm, học lực và quy định học tập.',
-        ),
-      ],
+      ),
     );
+  }
+
+  void _selectTab(int index) {
+    setState(() => _selectedIndex = index);
   }
 }
