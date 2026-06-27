@@ -26,6 +26,18 @@ class ApiClient {
     return _send('POST', path, body: body);
   }
 
+  Future<Object?> put(String path, {Map<String, Object?>? body}) {
+    return _send('PUT', path, body: body);
+  }
+
+  Future<Object?> patch(String path, {Map<String, Object?>? body}) {
+    return _send('PATCH', path, body: body);
+  }
+
+  Future<Object?> delete(String path) {
+    return _send('DELETE', path);
+  }
+
   Future<Object?> _send(
     String method,
     String path, {
@@ -48,6 +60,17 @@ class ApiClient {
           headers: headers,
           body: jsonEncode(body ?? {}),
         ),
+        'PATCH' => await _httpClient.patch(
+          uri,
+          headers: headers,
+          body: jsonEncode(body ?? {}),
+        ),
+        'PUT' => await _httpClient.put(
+          uri,
+          headers: headers,
+          body: jsonEncode(body ?? {}),
+        ),
+        'DELETE' => await _httpClient.delete(uri, headers: headers),
         _ => throw UnsupportedError('Unsupported method $method'),
       };
     } on http.ClientException catch (error) {
