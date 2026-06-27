@@ -5,11 +5,14 @@ import 'pages/admin/admin_dashboard_page.dart';
 import 'pages/auth/forgot_password_page.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/register_page.dart';
-import 'pages/dashboard_page.dart';
+import 'pages/student/student_dashboard_page.dart';
 import 'pages/system_admin/system_admin_dashboard_page.dart';
 import 'services/api/api_client.dart';
+import 'services/api/modules/admin_api_service.dart';
 import 'services/api/modules/auth_api_service.dart';
 import 'services/api/modules/student_api_service.dart';
+import 'services/api/modules/system_admin_api_service.dart';
+import 'services/auth/google_identity_service.dart';
 
 class UniBuddyApp extends StatefulWidget {
   const UniBuddyApp({super.key});
@@ -21,7 +24,10 @@ class UniBuddyApp extends StatefulWidget {
 class _UniBuddyAppState extends State<UniBuddyApp> {
   late final ApiClient _apiClient;
   late final AuthApiService _authApi;
+  late final AdminApiService _adminApi;
   late final StudentApiService _studentApi;
+  late final SystemAdminApiService _systemAdminApi;
+  late final GoogleIdentityService _googleIdentityService;
   AuthSession? _session;
 
   @override
@@ -29,7 +35,10 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     super.initState();
     _apiClient = ApiClient();
     _authApi = AuthApiService(_apiClient);
+    _adminApi = AdminApiService(_apiClient);
     _studentApi = StudentApiService(_apiClient);
+    _systemAdminApi = SystemAdminApiService(_apiClient);
+    _googleIdentityService = GoogleIdentityService();
   }
 
   @override
@@ -84,6 +93,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   Widget _buildAuthHome(BuildContext navigatorContext) {
     return LoginPage(
       authApi: _authApi,
+      googleIdentityService: _googleIdentityService,
       onLoginSuccess: (session) {
         setState(() => _session = session);
       },
@@ -109,16 +119,24 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
       case UserRoleCode.student:
         return _buildStudentDashboard(session);
       case UserRoleCode.admin:
-        return AdminDashboardPage(session: session, onLogout: _logout);
+        return AdminDashboardPage(
+          session: session,
+          adminApi: _adminApi,
+          onLogout: _logout,
+        );
       case UserRoleCode.systemAdmin:
-        return SystemAdminDashboardPage(session: session, onLogout: _logout);
+        return SystemAdminDashboardPage(
+          session: session,
+          systemAdminApi: _systemAdminApi,
+          onLogout: _logout,
+        );
       case null:
         return _UnsupportedRolePage(session: session, onLogout: _logout);
     }
   }
 
   Widget _buildStudentDashboard(AuthSession session) {
-    return DashboardPage(
+    return StudentDashboardPage(
       session: session,
       studentApi: _studentApi,
       onLogout: _logout,
