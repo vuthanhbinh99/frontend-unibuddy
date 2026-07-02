@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'models/auth_models.dart';
+import 'l10n/app_localizations.dart';
 import 'pages/admin/admin_dashboard_page.dart';
 import 'pages/auth/forgot_password_page.dart';
 import 'pages/auth/login_page.dart';
@@ -13,6 +16,7 @@ import 'services/api/modules/auth_api_service.dart';
 import 'services/api/modules/student_api_service.dart';
 import 'services/api/modules/system_admin_api_service.dart';
 import 'services/auth/google_identity_service.dart';
+import 'services/local/frontend_preferences_service.dart';
 
 class UniBuddyApp extends StatefulWidget {
   const UniBuddyApp({super.key});
@@ -28,7 +32,10 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   late final StudentApiService _studentApi;
   late final SystemAdminApiService _systemAdminApi;
   late final GoogleIdentityService _googleIdentityService;
+  late final FrontendPreferencesService _frontendPreferences;
+  late final AppLocalizationController _localizationController;
   AuthSession? _session;
+  bool _ready = false;
 
   @override
   void initState() {
@@ -39,6 +46,11 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     _studentApi = StudentApiService(_apiClient);
     _systemAdminApi = SystemAdminApiService(_apiClient);
     _googleIdentityService = GoogleIdentityService();
+    _frontendPreferences = FrontendPreferencesService();
+    _localizationController = AppLocalizationController(
+      preferences: _frontendPreferences,
+    );
+    unawaited(_bootstrap());
   }
 
   @override
@@ -47,15 +59,41 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     super.dispose();
   }
 
+  Future<void> _bootstrap() async {
+    await _localizationController.load();
+    _studentApi.setAcceptLanguageCode(_localizationController.languageCode);
+    if (mounted) {
+      setState(() => _ready = true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'UniBuddy',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      home: Builder(
-        builder: (context) =>
-            _session == null ? _buildAuthHome(context) : _buildRoleHome(),
+    if (!_ready) {
+      return MaterialApp(
+        title: 'UniBuddy',
+        debugShowCheckedModeBanner: false,
+        theme: _buildTheme(),
+        home: const _AppLoadingPage(),
+      );
+    }
+
+    return AppLocalizationScope(
+      controller: _localizationController,
+      child: AnimatedBuilder(
+        animation: _localizationController,
+        builder: (context, _) {
+          return MaterialApp(
+            title: context.l10n.t('app.title'),
+            debugShowCheckedModeBanner: false,
+            theme: _buildTheme(),
+            locale: _localizationController.locale,
+            home: Builder(
+              builder: (context) =>
+                  _session == null ? _buildAuthHome(context) : _buildRoleHome(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -139,8 +177,15 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     return StudentDashboardPage(
       session: session,
       studentApi: _studentApi,
+      currentLanguageCode: _localizationController.languageCode,
+      onLanguageChanged: _handleLanguageChanged,
       onLogout: _logout,
     );
+  }
+
+  Future<void> _handleLanguageChanged(String code) async {
+    await _localizationController.setLanguage(code);
+    _studentApi.setAcceptLanguageCode(_localizationController.languageCode);
   }
 
   Future<void> _logout() async {
@@ -166,10 +211,10 @@ class _UnsupportedRolePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('UniBuddy'),
+        title: Text(context.l10n.t('app.title')),
         actions: [
           IconButton(
-            tooltip: 'Đăng xuất',
+            tooltip: context.l10n.t('common.logout'),
             onPressed: onLogout,
             icon: const Icon(Icons.logout),
           ),
@@ -184,7 +229,10 @@ class _UnsupportedRolePage extends StatelessWidget {
               const Icon(Icons.lock_person_outlined, size: 44),
               const SizedBox(height: 14),
               Text(
-                'Vai trò ${session.user.role.code} chưa được hỗ trợ trên frontend.',
+                context.l10n.t(
+                  'app.unsupportedRole.message',
+                  arguments: {'role': session.user.role.code},
+                ),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 18,
@@ -195,6 +243,17 @@ class _UnsupportedRolePage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AppLoadingPage extends StatelessWidget {
+  const _AppLoadingPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
