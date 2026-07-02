@@ -180,8 +180,8 @@ class _OverviewContent extends StatelessWidget {
               title: 'Lưu trữ',
               trailing: Text(
                 data.storage.firebase.configured
-                    ? 'Firebase: bật'
-                    : 'Firebase: chưa cấu hình',
+                    ? 'Cloudinary: bật'
+                    : 'Cloudinary: chưa cấu hình',
                 style: TextStyle(
                   color: data.storage.firebase.configured
                       ? systemAdminSuccess
@@ -205,7 +205,7 @@ class _OverviewContent extends StatelessWidget {
                   ),
                   const Divider(height: 18),
                   _StorageRow(
-                    label: 'Firebase Storage',
+                    label: 'Cloudinary Storage',
                     value: formatBytes(data.storage.firebase.totalBytes),
                   ),
                 ],
