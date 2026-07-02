@@ -1,4 +1,7 @@
 import 'auth_models.dart';
+import 'student_course_models.dart' as catalog;
+import 'student_grade_models.dart';
+import 'student_schedule_models.dart' as schedule_model;
 
 class StudentProfile {
   const StudentProfile({
@@ -90,4 +93,70 @@ class StudentHomeData {
       schedule: const [],
     );
   }
+
+  factory StudentHomeData.fromBackend({
+    required PublicUser user,
+    required catalog.StudentCourseData courseData,
+    required schedule_model.StudentScheduleData scheduleData,
+    required StudentGradeTranscriptData gradeData,
+  }) {
+    final totalCredits =
+        gradeData.summary.calculatedCredits +
+        gradeData.summary.remainingCredits;
+    final fallbackCredits = courseData.items.fold<int>(
+      0,
+      (sum, item) => sum + item.credits,
+    );
+    final todayBackendDay = _todayBackendDay();
+    final todaySchedule = scheduleData.items
+        .where((item) => item.dayOfWeek == todayBackendDay)
+        .map(
+          (item) => ScheduleItem(
+            name: item.courseName,
+            time: 'Tiết ${item.startPeriod}-${item.endPeriod}',
+            room: item.room ?? 'Chưa cập nhật phòng',
+            icon: 'BookOpen',
+            completed: false,
+          ),
+        )
+        .toList();
+
+    return StudentHomeData(
+      profile: StudentProfile(
+        name: user.fullName,
+        avatarUrl: user.avatarUrl,
+        major: user.role.name,
+        joinedSemester: _selectedSemesterName(courseData),
+        completedCredits: gradeData.summary.calculatedCredits,
+        totalCreditsNeeded: totalCredits > 0 ? totalCredits : fallbackCredits,
+        targetGpa: 0,
+      ),
+      courses: gradeData.items
+          .where((item) => item.result.score4 != null)
+          .map(
+            (item) => Course(
+              credits: item.credits.toDouble(),
+              grade: item.result.score4!,
+            ),
+          )
+          .toList(),
+      projects: const [],
+      schedule: todaySchedule,
+    );
+  }
+}
+
+int _todayBackendDay() {
+  final weekday = DateTime.now().weekday;
+  return weekday == DateTime.sunday ? 8 : weekday + 1;
+}
+
+String _selectedSemesterName(catalog.StudentCourseData data) {
+  final selectedId = data.selectedSemesterId;
+  if (selectedId == null) {
+    return data.semesters.isEmpty ? '--' : data.semesters.first.name;
+  }
+
+  final selected = data.semesters.where((item) => item.id == selectedId);
+  return selected.isEmpty ? '--' : selected.first.name;
 }
