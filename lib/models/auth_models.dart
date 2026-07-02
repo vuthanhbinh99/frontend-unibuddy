@@ -17,6 +17,16 @@ enum UserRoleCode {
   }
 }
 
+extension UserRoleCodeLabels on UserRoleCode {
+  String get label {
+    return switch (this) {
+      UserRoleCode.student => 'Sinh Viên',
+      UserRoleCode.admin => 'Admin',
+      UserRoleCode.systemAdmin => 'Quản Trị Viên',
+    };
+  }
+}
+
 class UserRole {
   const UserRole({required this.id, required this.code, required this.name});
 
@@ -35,6 +45,8 @@ class UserRole {
 
 extension UserRoleMatching on UserRole {
   UserRoleCode? get roleCode => UserRoleCode.from(code);
+
+  String get displayName => roleCode?.label ?? name;
 
   bool get isAdminOrSystemAdmin {
     return roleCode == UserRoleCode.admin ||
@@ -80,6 +92,17 @@ class PublicUser {
   }
 }
 
+extension PublicUserDisplayLabels on PublicUser {
+  String get statusLabel {
+    return switch (status) {
+      'HOAT_DONG' => 'Hoạt động',
+      'BI_KHOA' => 'Bị khóa',
+      'CHO_DOI_MAT_KHAU' => 'Chờ đổi mật khẩu',
+      _ => status,
+    };
+  }
+}
+
 class AuthSession {
   const AuthSession({
     required this.user,
@@ -102,6 +125,49 @@ class AuthSession {
         json['refreshTokenExpiresAt'] as String,
       ),
     );
+  }
+}
+
+class AuthDeviceSession {
+  const AuthDeviceSession({
+    required this.id,
+    required this.expiresAt,
+    required this.lastActiveAt,
+    required this.createdAt,
+    required this.isCurrent,
+    this.deviceType,
+    this.ipAddress,
+    this.userAgent,
+  });
+
+  final String id;
+  final String? deviceType;
+  final String? ipAddress;
+  final String? userAgent;
+  final DateTime expiresAt;
+  final DateTime lastActiveAt;
+  final DateTime createdAt;
+  final bool isCurrent;
+
+  factory AuthDeviceSession.fromJson(Map<String, dynamic> json) {
+    return AuthDeviceSession(
+      id: json['id'] as String,
+      deviceType: json['deviceType'] as String?,
+      ipAddress: json['ipAddress'] as String?,
+      userAgent: json['userAgent'] as String?,
+      expiresAt: DateTime.parse(json['expiresAt'] as String),
+      lastActiveAt: DateTime.parse(json['lastActiveAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      isCurrent: json['isCurrent'] as bool? ?? false,
+    );
+  }
+
+  bool get isMobile {
+    final value = '${deviceType ?? ''} ${userAgent ?? ''}'.toLowerCase();
+    return value.contains('android') ||
+        value.contains('iphone') ||
+        value.contains('ipad') ||
+        value.contains('mobile');
   }
 }
 
