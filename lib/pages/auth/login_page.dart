@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/auth_models.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import '../../services/auth/google_identity_service.dart';
@@ -44,24 +45,25 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthScaffold(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
-              title: 'Chào mừng bạn quay lại',
-              subtitle: 'Đăng nhập bằng tài khoản UniBuddy.',
+            AuthHeader(
+              title: l10n.t('auth.login.title'),
+              subtitle: l10n.t('auth.login.subtitle'),
             ),
             const SizedBox(height: 28),
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline),
-                labelText: 'Email',
+                labelText: l10n.t('auth.fields.email'),
               ),
               validator: _validateEmail,
             ),
@@ -73,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
               onFieldSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline),
-                labelText: 'Mật khẩu',
+                labelText: l10n.t('auth.fields.password'),
                 suffixIcon: IconButton(
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
@@ -83,14 +85,14 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               validator: (value) => value == null || value.isEmpty
-                  ? 'Vui lòng nhập mật khẩu'
+                  ? l10n.t('auth.validation.passwordRequired')
                   : null,
             ),
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: widget.onForgotPasswordTap,
-                child: const Text('Quên mật khẩu?'),
+                child: Text(l10n.t('auth.login.forgotPassword')),
               ),
             ),
             if (_errorMessage != null) ...[
@@ -98,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 14),
             ],
             AuthActionButton(
-              label: 'Đăng nhập',
+              label: l10n.t('auth.login.button'),
               loading: _loading,
               onPressed: _googleLoading ? null : _submit,
             ),
@@ -132,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 18),
             OutlinedButton(
               onPressed: widget.onRegisterTap,
-              child: const Text('Tạo tài khoản người dùng mới'),
+              child: Text(l10n.t('auth.login.register')),
             ),
           ],
         ),
@@ -161,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Đăng nhập thất bại, vui lòng thử lại.');
+      setState(() => _errorMessage = context.l10n.t('auth.login.error'));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -196,9 +198,7 @@ class _LoginPageState extends State<LoginPage> {
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(
-        () => _errorMessage = 'Đăng nhập Google thất bại, vui lòng thử lại.',
-      );
+      setState(() => _errorMessage = context.l10n.t('auth.login.googleError'));
     } finally {
       if (mounted) {
         setState(() => _googleLoading = false);
@@ -214,8 +214,9 @@ class _LoginPageState extends State<LoginPage> {
         if (user.role.roleCode != UserRoleCode.admin) {
           if (mounted) {
             setState(
-              () => _errorMessage =
-                  'Tài khoản này không áp dụng mật khẩu tạm thời. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+              () => _errorMessage = context.l10n.t(
+                'auth.login.tempPasswordMismatch',
+              ),
             );
           }
           return;
@@ -224,8 +225,9 @@ class _LoginPageState extends State<LoginPage> {
         final newPassword = await _promptNewPassword();
         if (newPassword == null || !mounted) {
           setState(
-            () => _errorMessage =
-                'Tài khoản đang dùng mật khẩu tạm thời. Vui lòng đổi mật khẩu để tiếp tục.',
+            () => _errorMessage = context.l10n.t(
+              'auth.login.tempPasswordRequired',
+            ),
           );
           return;
         }
@@ -244,8 +246,9 @@ class _LoginPageState extends State<LoginPage> {
 
         if (mounted) {
           setState(
-            () => _errorMessage =
-                'Đổi mật khẩu tạm thời thất bại. Vui lòng thử lại với mật khẩu mới hợp lệ.',
+            () => _errorMessage = context.l10n.t(
+              'auth.login.tempPasswordUpdateFailed',
+            ),
           );
         }
     }
@@ -254,10 +257,10 @@ class _LoginPageState extends State<LoginPage> {
   String? _validateEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
-      return 'Vui lòng nhập email';
+      return context.l10n.t('auth.validation.emailRequired');
     }
     if (!text.contains('@')) {
-      return 'Email không hợp lệ';
+      return context.l10n.t('auth.validation.emailInvalid');
     }
     return null;
   }
@@ -275,7 +278,7 @@ class _LoginPageState extends State<LoginPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Đổi mật khẩu tạm thời'),
+              title: Text(context.l10n.t('auth.passwordChange.title')),
               content: Form(
                 key: formKey,
                 child: Column(
@@ -285,7 +288,9 @@ class _LoginPageState extends State<LoginPage> {
                       controller: passwordController,
                       obscureText: obscure,
                       decoration: InputDecoration(
-                        labelText: 'Mật khẩu mới',
+                        labelText: context.l10n.t(
+                          'auth.passwordChange.newPassword',
+                        ),
                         suffixIcon: IconButton(
                           onPressed: () =>
                               setDialogState(() => obscure = !obscure),
@@ -297,7 +302,9 @@ class _LoginPageState extends State<LoginPage> {
                       validator: (value) {
                         final text = value?.trim() ?? '';
                         if (text.length < 8) {
-                          return 'Mật khẩu tối thiểu 8 ký tự';
+                          return context.l10n.t(
+                            'auth.passwordChange.minLength',
+                          );
                         }
                         return null;
                       },
@@ -306,13 +313,15 @@ class _LoginPageState extends State<LoginPage> {
                     TextFormField(
                       controller: confirmController,
                       obscureText: obscure,
-                      decoration: const InputDecoration(
-                        labelText: 'Xác nhận mật khẩu mới',
+                      decoration: InputDecoration(
+                        labelText: context.l10n.t(
+                          'auth.passwordChange.confirmPassword',
+                        ),
                       ),
                       validator: (value) {
                         if ((value ?? '').trim() !=
                             passwordController.text.trim()) {
-                          return 'Mật khẩu xác nhận không khớp';
+                          return context.l10n.t('auth.passwordChange.mismatch');
                         }
                         return null;
                       },
@@ -323,7 +332,7 @@ class _LoginPageState extends State<LoginPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Hủy'),
+                  child: Text(context.l10n.t('common.cancel')),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -335,7 +344,7 @@ class _LoginPageState extends State<LoginPage> {
                       dialogContext,
                     ).pop(passwordController.text.trim());
                   },
-                  child: const Text('Cập nhật'),
+                  child: Text(context.l10n.t('auth.passwordChange.update')),
                 ),
               ],
             );

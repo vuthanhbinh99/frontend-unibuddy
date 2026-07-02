@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({super.key, required this.child});
 
@@ -77,8 +79,8 @@ class AuthHeader extends StatelessWidget {
                 child: const Icon(Icons.school, color: Colors.white, size: 34),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'UniBuddy',
+              Text(
+                context.l10n.t('app.title'),
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),

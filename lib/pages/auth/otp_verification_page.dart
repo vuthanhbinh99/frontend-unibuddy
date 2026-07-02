@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'reset_password_page.dart';
@@ -35,6 +36,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthScaffold(
       child: Form(
         key: _formKey,
@@ -43,8 +45,11 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
           children: [
             AuthHeader(
               showBackButton: true,
-              title: 'Xác thực mã',
-              subtitle: 'Mã 6 số đã được gửi tới ${widget.email}.',
+              title: l10n.t('auth.otp.title'),
+              subtitle: l10n.t(
+                'auth.otp.subtitle',
+                arguments: {'email': widget.email},
+              ),
             ),
             const SizedBox(height: 28),
             TextFormField(
@@ -58,9 +63,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 fontWeight: FontWeight.w800,
               ),
               onFieldSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 counterText: '',
-                labelText: 'Mã xác thực',
+                labelText: l10n.t('auth.otp.code'),
                 prefixIcon: Icon(Icons.pin_outlined),
               ),
               validator: _validateCode,
@@ -78,7 +83,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
               const SizedBox(height: 14),
             ],
             AuthActionButton(
-              label: 'Xác thực',
+              label: l10n.t('auth.otp.button'),
               loading: _loading,
               icon: Icons.verified_outlined,
               onPressed: _submit,
@@ -93,7 +98,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.refresh),
-              label: const Text('Gửi lại mã'),
+              label: Text(l10n.t('auth.otp.resend')),
             ),
           ],
         ),
@@ -129,9 +134,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(
-        () => _errorMessage = 'Không thể xác thực mã, vui lòng thử lại.',
-      );
+      setState(() => _errorMessage = context.l10n.t('auth.otp.error'));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -148,11 +151,13 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
 
     try {
       await widget.authApi.requestForgotPasswordCode(widget.email);
-      setState(() => _successMessage = 'Mã xác thực mới đã được gửi.');
+      setState(
+        () => _successMessage = context.l10n.t('auth.otp.resendSuccess'),
+      );
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Không thể gửi lại mã, vui lòng thử lại.');
+      setState(() => _errorMessage = context.l10n.t('auth.otp.resendError'));
     } finally {
       if (mounted) {
         setState(() => _resending = false);
@@ -163,7 +168,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   String? _validateCode(String? value) {
     final text = value?.trim() ?? '';
     if (!RegExp(r'^\d{6}$').hasMatch(text)) {
-      return 'Mã xác thực gồm đúng 6 chữ số';
+      return context.l10n.t('auth.otp.validation');
     }
     return null;
   }

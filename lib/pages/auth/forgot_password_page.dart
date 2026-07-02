@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'otp_verification_page.dart';
@@ -28,17 +29,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthScaffold(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
+            AuthHeader(
               showBackButton: true,
-              title: 'Quên mật khẩu',
-              subtitle:
-                  'Nhập email tài khoản để nhận mã xác thực đặt lại mật khẩu.',
+              title: l10n.t('auth.forgot.title'),
+              subtitle: l10n.t('auth.forgot.subtitle'),
             ),
             const SizedBox(height: 28),
             TextFormField(
@@ -46,9 +47,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline),
-                labelText: 'Email',
+                labelText: l10n.t('auth.fields.email'),
               ),
               validator: _validateEmail,
             ),
@@ -58,7 +59,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               const SizedBox(height: 14),
             ],
             AuthActionButton(
-              label: 'Gửi mã xác thực',
+              label: l10n.t('auth.forgot.button'),
               loading: _loading,
               icon: Icons.mark_email_read_outlined,
               onPressed: _submit,
@@ -92,9 +93,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(
-        () => _errorMessage = 'Không thể gửi mã xác thực, vui lòng thử lại.',
-      );
+      setState(() => _errorMessage = context.l10n.t('auth.forgot.error'));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -105,10 +104,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   String? _validateEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
-      return 'Vui lòng nhập email';
+      return context.l10n.t('auth.validation.emailRequired');
     }
     if (!text.contains('@')) {
-      return 'Email không hợp lệ';
+      return context.l10n.t('auth.validation.emailInvalid');
     }
     return null;
   }

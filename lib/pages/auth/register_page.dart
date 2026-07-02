@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'widgets/auth_scaffold.dart';
@@ -45,36 +46,36 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthScaffold(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
+            AuthHeader(
               showBackButton: true,
-              title: 'Tạo tài khoản sinh viên',
-              subtitle:
-                  'Điền thông tin học tập cơ bản để bắt đầu sử dụng UniBuddy.',
+              title: l10n.t('auth.register.title'),
+              subtitle: l10n.t('auth.register.subtitle'),
             ),
             const SizedBox(height: 26),
             TextFormField(
               controller: _fullNameController,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.person_outline),
-                labelText: 'Họ và tên',
+                labelText: l10n.t('auth.register.fullName'),
               ),
-              validator: _required('Vui lòng nhập họ tên'),
+              validator: _required(l10n.t('auth.register.requiredName')),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.mail_outline),
-                labelText: 'Email',
+                labelText: l10n.t('auth.fields.email'),
               ),
               validator: _validateEmail,
             ),
@@ -82,20 +83,20 @@ class _RegisterPageState extends State<RegisterPage> {
             TextFormField(
               controller: _maSinhVienController,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.badge_outlined),
-                labelText: 'Mã sinh viên',
+                labelText: l10n.t('auth.register.studentId'),
               ),
-              validator: _required('Vui lòng nhập mã sinh viên'),
+              validator: _required(l10n.t('auth.register.requiredStudentId')),
             ),
             const SizedBox(height: 14),
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.phone_outlined),
-                labelText: 'Số điện thoại (tùy chọn)',
+                labelText: l10n.t('auth.register.phone'),
               ),
             ),
             const SizedBox(height: 14),
@@ -105,9 +106,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: TextFormField(
                     controller: _nganhHocController,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       prefixIcon: Icon(Icons.menu_book_outlined),
-                      labelText: 'Ngành học',
+                      labelText: l10n.t('auth.register.major'),
                     ),
                   ),
                 ),
@@ -116,9 +117,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   child: TextFormField(
                     controller: _khoaHocController,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       prefixIcon: Icon(Icons.calendar_today_outlined),
-                      labelText: 'Khóa học',
+                      labelText: l10n.t('auth.register.cohort'),
                     ),
                   ),
                 ),
@@ -128,9 +129,9 @@ class _RegisterPageState extends State<RegisterPage> {
             TextFormField(
               controller: _maTruongCodeController,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.apartment_outlined),
-                labelText: 'Mã trường (tùy chọn, ví dụ HUST)',
+                labelText: l10n.t('auth.register.schoolCode'),
               ),
             ),
             const SizedBox(height: 14),
@@ -140,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline),
-                labelText: 'Mật khẩu',
+                labelText: l10n.t('auth.fields.password'),
                 suffixIcon: IconButton(
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
@@ -157,9 +158,9 @@ class _RegisterPageState extends State<RegisterPage> {
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.lock_reset_outlined),
-                labelText: 'Xác nhận mật khẩu',
+                labelText: l10n.t('auth.passwordChange.confirmPassword'),
               ),
               validator: _validateConfirmPassword,
             ),
@@ -176,7 +177,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 14),
             ],
             AuthActionButton(
-              label: 'Hoàn tất đăng ký',
+              label: l10n.t('auth.register.button'),
               loading: _loading,
               icon: Icons.person_add_alt_1,
               onPressed: _submit,
@@ -211,7 +212,10 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       setState(
-        () => _successMessage = '${result.message}. Bạn có thể đăng nhập ngay.',
+        () => _successMessage = context.l10n.t(
+          'auth.register.success',
+          arguments: {'message': result.message},
+        ),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 900));
@@ -221,7 +225,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(() => _errorMessage = 'Không thể đăng ký, vui lòng thử lại.');
+      setState(() => _errorMessage = context.l10n.t('auth.register.error'));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -236,27 +240,27 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _validateEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
-      return 'Vui lòng nhập email';
+      return context.l10n.t('auth.validation.emailRequired');
     }
     if (!text.contains('@')) {
-      return 'Email không hợp lệ';
+      return context.l10n.t('auth.validation.emailInvalid');
     }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Vui lòng nhập mật khẩu';
+      return context.l10n.t('auth.register.requiredPassword');
     }
     if (value.length < 8) {
-      return 'Mật khẩu phải có ít nhất 8 ký tự';
+      return context.l10n.t('auth.register.passwordMinLength');
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value != _passwordController.text) {
-      return 'Mật khẩu xác nhận chưa khớp';
+      return context.l10n.t('auth.register.passwordMismatch');
     }
     return null;
   }

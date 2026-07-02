@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'widgets/auth_scaffold.dart';
@@ -35,17 +36,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthScaffold(
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
+            AuthHeader(
               showBackButton: true,
-              title: 'Đặt lại mật khẩu',
-              subtitle:
-                  'Tạo mật khẩu mới để bảo vệ tài khoản UniBuddy của bạn.',
+              title: l10n.t('auth.reset.title'),
+              subtitle: l10n.t('auth.reset.subtitle'),
             ),
             const SizedBox(height: 28),
             TextFormField(
@@ -54,7 +55,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.lock_outline),
-                labelText: 'Mật khẩu mới',
+                labelText: l10n.t('auth.reset.newPassword'),
                 suffixIcon: IconButton(
                   onPressed: () =>
                       setState(() => _obscurePassword = !_obscurePassword),
@@ -71,9 +72,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 prefixIcon: Icon(Icons.lock_reset_outlined),
-                labelText: 'Xác nhận mật khẩu mới',
+                labelText: l10n.t('auth.reset.confirmPassword'),
               ),
               validator: _validateConfirmPassword,
             ),
@@ -83,7 +84,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               const SizedBox(height: 14),
             ],
             AuthActionButton(
-              label: 'Đổi mật khẩu',
+              label: l10n.t('auth.reset.button'),
               loading: _loading,
               icon: Icons.lock_reset,
               onPressed: _submit,
@@ -112,17 +113,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.'),
-        ),
+        SnackBar(content: Text(context.l10n.t('auth.reset.success'))),
       );
       Navigator.of(context).popUntil((route) => route.isFirst);
     } on ApiException catch (error) {
       setState(() => _errorMessage = error.message);
     } catch (_) {
-      setState(
-        () => _errorMessage = 'Không thể đổi mật khẩu, vui lòng thử lại.',
-      );
+      setState(() => _errorMessage = context.l10n.t('auth.reset.error'));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -132,17 +129,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Vui lòng nhập mật khẩu mới';
+      return context.l10n.t('auth.reset.requiredPassword');
     }
     if (value.length < 8) {
-      return 'Mật khẩu phải có ít nhất 8 ký tự';
+      return context.l10n.t('auth.reset.passwordMinLength');
     }
     return null;
   }
 
   String? _validateConfirmPassword(String? value) {
     if (value != _passwordController.text) {
-      return 'Mật khẩu xác nhận chưa khớp';
+      return context.l10n.t('auth.reset.passwordMismatch');
     }
     return null;
   }
