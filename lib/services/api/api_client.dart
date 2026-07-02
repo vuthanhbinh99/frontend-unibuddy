@@ -13,9 +13,17 @@ class ApiClient {
   final http.Client _httpClient;
   final String _baseUrl;
   String? _accessToken;
+  String? _acceptLanguageCode;
 
   void setAccessToken(String? token) {
     _accessToken = token;
+  }
+
+  void setAcceptLanguageCode(String? languageCode) {
+    final normalized = languageCode?.trim();
+    _acceptLanguageCode = normalized == null || normalized.isEmpty
+        ? null
+        : normalized;
   }
 
   Future<Object?> get(String path, {Map<String, String>? query}) {
@@ -26,6 +34,42 @@ class ApiClient {
     return _send('POST', path, body: body);
   }
 
+  Future<Object?> postMultipart(
+    String path, {
+    required String fileField,
+    required List<int> bytes,
+    required String filename,
+    Map<String, String>? fields,
+  }) async {
+    final request = http.MultipartRequest('POST', _buildUri(path, null));
+    request.headers.addAll({
+      'Accept': 'application/json',
+      ...?(_acceptLanguageCode == null
+          ? null
+          : {'Accept-Language': _acceptLanguageCode!}),
+      if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+    });
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(fileField, bytes, filename: filename),
+    );
+
+    try {
+      final streamedResponse = await _httpClient.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+      return _decodeEnvelope(response);
+    } on http.ClientException catch (error) {
+      throw ApiException(
+        code: 'NETWORK_ERROR',
+        message:
+            'Không thể kết nối backend UniBuddy. Vui lòng kiểm tra API base URL.',
+        details: error.message,
+      );
+    }
+  }
+
   Future<Object?> put(String path, {Map<String, Object?>? body}) {
     return _send('PUT', path, body: body);
   }
@@ -34,8 +78,8 @@ class ApiClient {
     return _send('PATCH', path, body: body);
   }
 
-  Future<Object?> delete(String path) {
-    return _send('DELETE', path);
+  Future<Object?> delete(String path, {Map<String, Object?>? body}) {
+    return _send('DELETE', path, body: body);
   }
 
   Future<Object?> _send(
@@ -48,6 +92,9 @@ class ApiClient {
     final headers = <String, String>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      ...?(_acceptLanguageCode == null
+          ? null
+          : {'Accept-Language': _acceptLanguageCode!}),
       if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
     };
 
@@ -70,7 +117,14 @@ class ApiClient {
           headers: headers,
           body: jsonEncode(body ?? {}),
         ),
-        'DELETE' => await _httpClient.delete(uri, headers: headers),
+        'DELETE' =>
+          body == null
+              ? await _httpClient.delete(uri, headers: headers)
+              : await _httpClient.delete(
+                  uri,
+                  headers: headers,
+                  body: jsonEncode(body),
+                ),
         _ => throw UnsupportedError('Unsupported method $method'),
       };
     } on http.ClientException catch (error) {
