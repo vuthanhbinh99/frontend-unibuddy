@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'widgets/auth_scaffold.dart';
+import 'widgets/password_strength_indicator.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key, required this.authApi});
@@ -61,6 +62,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 26),
             TextFormField(
               controller: _fullNameController,
+              onChanged: (_) => setState(() {}),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.person_outline),
@@ -71,6 +73,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _emailController,
+              onChanged: (_) => setState(() {}),
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -82,6 +85,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _maSinhVienController,
+              onChanged: (_) => setState(() {}),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.badge_outlined),
@@ -92,6 +96,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _phoneController,
+              onChanged: (_) => setState(() {}),
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -105,6 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Expanded(
                   child: TextFormField(
                     controller: _nganhHocController,
+                    onChanged: (_) => setState(() {}),
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.menu_book_outlined),
@@ -116,6 +122,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 Expanded(
                   child: TextFormField(
                     controller: _khoaHocController,
+                    onChanged: (_) => setState(() {}),
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.calendar_today_outlined),
@@ -128,6 +135,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _maTruongCodeController,
+              onChanged: (_) => setState(() {}),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.apartment_outlined),
@@ -137,6 +145,7 @@ class _RegisterPageState extends State<RegisterPage> {
             const SizedBox(height: 14),
             TextFormField(
               controller: _passwordController,
+              onChanged: (_) => setState(() {}),
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -151,6 +160,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               validator: _validatePassword,
+            ),
+            const SizedBox(height: 10),
+            PasswordStrengthGuidance(
+              password: _passwordController.text,
+              relatedValues: [
+                _fullNameController.text,
+                _emailController.text,
+                _maSinhVienController.text,
+              ],
             ),
             const SizedBox(height: 14),
             TextFormField(
@@ -249,11 +267,21 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
+    final password = value ?? '';
+    if (password.isEmpty) {
       return context.l10n.t('auth.register.requiredPassword');
     }
-    if (value.length < 8) {
-      return context.l10n.t('auth.register.passwordMinLength');
+    final message = passwordStrengthValidationMessage(
+      context,
+      password,
+      relatedValues: [
+        _fullNameController.text,
+        _emailController.text,
+        _maSinhVienController.text,
+      ],
+    );
+    if (message != null) {
+      return message;
     }
     return null;
   }

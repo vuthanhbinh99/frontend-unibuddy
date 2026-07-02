@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/auth_api_service.dart';
 import 'widgets/auth_scaffold.dart';
+import 'widgets/password_strength_indicator.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({
@@ -51,6 +52,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             const SizedBox(height: 28),
             TextFormField(
               controller: _passwordController,
+              onChanged: (_) => setState(() {}),
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -66,6 +68,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
               ),
               validator: _validatePassword,
             ),
+            const SizedBox(height: 10),
+            PasswordStrengthGuidance(password: _passwordController.text),
             const SizedBox(height: 14),
             TextFormField(
               controller: _confirmPasswordController,
@@ -128,11 +132,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
+    final password = value ?? '';
+    if (password.isEmpty) {
       return context.l10n.t('auth.reset.requiredPassword');
     }
-    if (value.length < 8) {
-      return context.l10n.t('auth.reset.passwordMinLength');
+    final message = passwordStrengthValidationMessage(context, password);
+    if (message != null) {
+      return message;
     }
     return null;
   }
