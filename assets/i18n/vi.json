@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "UniBuddy",
+    "unsupportedRole": {
+      "message": "Vai trò {role} chưa được hỗ trợ trên frontend."
+    }
+  },
+  "common": {
+    "logout": "Đăng xuất",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "vietnamese": "Tiếng Việt",
+    "english": "Tiếng Anh"
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Mật khẩu"
+    },
+    "validation": {
+      "emailRequired": "Vui lòng nhập email",
+      "emailInvalid": "Email không hợp lệ",
+      "passwordRequired": "Vui lòng nhập mật khẩu"
+    },
+    "login": {
+      "title": "Chào mừng bạn quay lại",
+      "subtitle": "Đăng nhập bằng tài khoản UniBuddy.",
+      "forgotPassword": "Quên mật khẩu?",
+      "button": "Đăng nhập",
+      "google": "Đăng nhập bằng Google",
+      "register": "Tạo tài khoản người dùng mới",
+      "error": "Đăng nhập thất bại, vui lòng thử lại.",
+      "googleError": "Đăng nhập Google thất bại, vui lòng thử lại.",
+      "tempPasswordMismatch": "Tài khoản này không áp dụng mật khẩu tạm thời. Vui lòng liên hệ quản trị viên để được hỗ trợ.",
+      "tempPasswordRequired": "Tài khoản đang dùng mật khẩu tạm thời. Vui lòng đổi mật khẩu để tiếp tục.",
+      "tempPasswordUpdateFailed": "Đổi mật khẩu tạm thời thất bại. Vui lòng thử lại với mật khẩu mới hợp lệ."
+    },
+    "passwordChange": {
+      "title": "Đổi mật khẩu tạm thời",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "minLength": "Mật khẩu tối thiểu 8 ký tự",
+      "mismatch": "Mật khẩu xác nhận không khớp",
+      "update": "Cập nhật"
+    },
+    "register": {
+      "title": "Tạo tài khoản sinh viên",
+      "subtitle": "Điền thông tin học tập cơ bản để bắt đầu sử dụng UniBuddy.",
+      "fullName": "Họ và tên",
+      "studentId": "Mã sinh viên",
+      "phone": "Số điện thoại (tùy chọn)",
+      "major": "Ngành học",
+      "cohort": "Khóa học",
+      "schoolCode": "Mã trường (tùy chọn, ví dụ HUST)",
+      "button": "Hoàn tất đăng ký",
+      "success": "{message}. Bạn có thể đăng nhập ngay.",
+      "error": "Không thể đăng ký, vui lòng thử lại.",
+      "requiredName": "Vui lòng nhập họ tên",
+      "requiredStudentId": "Vui lòng nhập mã sinh viên",
+      "requiredPassword": "Vui lòng nhập mật khẩu",
+      "passwordMinLength": "Mật khẩu phải có ít nhất 8 ký tự",
+      "passwordMismatch": "Mật khẩu xác nhận chưa khớp"
+    },
+    "forgot": {
+      "title": "Quên mật khẩu",
+      "subtitle": "Nhập email tài khoản để nhận mã xác thực đặt lại mật khẩu.",
+      "button": "Gửi mã xác thực",
+      "error": "Không thể gửi mã xác thực, vui lòng thử lại."
+    },
+    "otp": {
+      "title": "Xác thực mã",
+      "subtitle": "Mã 6 số đã được gửi tới {email}.",
+      "code": "Mã xác thực",
+      "button": "Xác thực",
+      "resend": "Gửi lại mã",
+      "resendSuccess": "Mã xác thực mới đã được gửi.",
+      "error": "Không thể xác thực mã, vui lòng thử lại.",
+      "resendError": "Không thể gửi lại mã, vui lòng thử lại.",
+      "validation": "Mã xác thực gồm đúng 6 chữ số"
+    },
+    "reset": {
+      "title": "Đặt lại mật khẩu",
+      "subtitle": "Tạo mật khẩu mới để bảo vệ tài khoản UniBuddy của bạn.",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "button": "Đổi mật khẩu",
+      "success": "Đổi mật khẩu thành công. Vui lòng đăng nhập lại.",
+      "error": "Không thể đổi mật khẩu, vui lòng thử lại.",
+      "requiredPassword": "Vui lòng nhập mật khẩu mới",
+      "passwordMinLength": "Mật khẩu phải có ít nhất 8 ký tự",
+      "passwordMismatch": "Mật khẩu xác nhận chưa khớp"
+    }
+  },
+  "student": {
+    "dashboard": {
+      "menu": {
+        "home": "Trang chủ",
+        "schedule": "Lịch học",
+        "catalog": "Danh mục",
+        "notifications": "Thông báo",
+        "settings": "Cài đặt"
+      },
+      "home": {
+        "greeting": "Chào ngày mới,",
+        "toggleThemeDark": "Chuyển sang dark mode",
+        "toggleThemeLight": "Chuyển sang light mode",
+        "gpaTitle": "ĐIỂM TÍCH LŨY GPA",
+        "gpaLabel": "Xếp loại: {label} (Hệ 4.0)",
+        "target": "Mục tiêu: {value} GPA",
+        "focusTitle": "Chế độ tập trung (Pomodoro)",
+        "focusSubtitle": "Bắt đầu một phiên 25 phút để tăng tốc hoàn thành bài tập!",
+        "projectsTitle": "Dự án & Dự án nhóm",
+        "projectsCount": "{count} dự án",
+        "scheduleTitle": "Lịch lên lớp hôm nay",
+        "scheduleEmpty": "Hôm nay bạn không có lịch lên lớp nào",
+        "roleLeader": "Trưởng nhóm",
+        "roleMember": "Thành viên",
+        "appBarTitle": "Trang chủ",
+        "logout": "Đăng xuất",
+        "gpaLevel": {
+          "none": "Chưa có dữ liệu",
+          "excellent": "Xuất sắc",
+          "good": "Giỏi",
+          "fair": "Khá"
+        },
+        "credits": "Tín chỉ: {completed}/{total}"
+      },
+      "catalog": {
+        "title": "Danh mục Tiện ích",
+        "subtitle": "Khám phá các công cụ hỗ trợ đời sống học đường cực đỉnh",
+        "course": "Học phần",
+        "schedule": "Thời khóa biểu",
+        "grades": "Điểm số",
+        "focus": "Pomodoro",
+        "studyGroups": "Nhóm học tập",
+        "storage": "Lưu trữ",
+        "flashcard": "Flashcard",
+        "kanban": "Task Kanban",
+        "notes": "Ghi chú",
+        "noCourses": "Chưa có học phần nào từ backend."
+      },
+      "notifications": {
+        "title": "Thông báo",
+        "unreadCount": "{count} thông báo chưa đọc",
+        "markAll": "Đọc tất cả",
+        "all": "Tất cả",
+        "unread": "Chưa đọc",
+        "allTypes": "Tất cả loại",
+        "empty": "Không tìm thấy thông báo",
+        "error": "Không thể tải thông báo.",
+        "readAllSuccess": "Đã đánh dấu đọc tất cả thông báo",
+        "allRead": "Bạn đã đọc hết",
+        "close": "Đóng",
+        "viewAll": "Xem tất cả thông báo",
+        "bellTooltip": "Thông báo",
+        "dropdownError": "Không thể tải thông báo mới nhất."
+      },
+      "schedule": {
+        "title": "Lịch Học",
+        "autoImport": "Tự động nhập thời khóa biểu",
+        "manualAdd": "Thêm lịch thủ công",
+        "importReadError": "Không thể đọc file TKB đã chọn trên thiết bị.",
+        "importNoCourses": "Chưa có dữ liệu môn học.",
+        "importNoValidRows": "File chưa có dòng TKB hợp lệ để import.",
+        "importTitle": "Import TKB tự động",
+        "importValidRows": "Dòng hợp lệ",
+        "importRowsToCheck": "Dòng cần kiểm tra",
+        "importAutoCreatedCourses": "Môn học tự tạo",
+        "importSampleErrors": "Một vài dòng lỗi",
+        "importRowError": "Dòng {row}: {errors}",
+        "importDialogImport": "Import {count} dòng",
+        "manualTitle": "Thêm lịch thủ công",
+        "manualCourse": "Môn học",
+        "manualDay": "Thứ",
+        "manualStartPeriod": "Tiết bắt đầu",
+        "manualPeriodCount": "Số tiết",
+        "manualRoom": "Phòng học",
+        "manualPeriodOverflow": "Khoảng tiết học không được vượt quá tiết 12.",
+        "manualSave": "Thêm lịch",
+        "manualNoCourses": "Bạn cần có môn học trước khi thêm lịch thủ công.",
+        "manualChooseCourse": "Vui lòng chọn môn học",
+        "manualSuccess": "Đã thêm lịch học thủ công.",
+        "manualError": "Không thể thêm lịch học lúc này, vui lòng thử lại.",
+        "importError": "Không thể import TKB lúc này, vui lòng thử lại.",
+        "courseCodeUnknown": "Chưa có mã môn học",
+        "periodRange": "Tiết {start} - {end}",
+        "roomUnknown": "Chưa cập nhật phòng",
+        "teacherUnknown": "Chưa cập nhật giảng viên",
+        "emptyToday": "Hôm nay không có tiết học nào",
+        "day": {
+          "mon": "Thứ 2",
+          "tue": "Thứ 3",
+          "wed": "Thứ 4",
+          "thu": "Thứ 5",
+          "fri": "Thứ 6",
+          "sat": "Thứ 7",
+          "sun": "Chủ Nhật"
+        }
+      },
+      "profile": {
+        "title": "Hồ sơ",
+        "headerTitle": "Hồ Sơ",
+        "fullName": "Họ và Tên",
+        "fullNameRequired": "Vui lòng nhập họ tên",
+        "email": "Địa chỉ Email",
+        "emailReadonly": "Email được quản lý từ backend và không thể sửa tại đây.",
+        "phone": "Số Điện Thoại",
+        "dataSection": "Dữ liệu cá nhân",
+        "status": "Trạng thái",
+        "role": "Vai trò",
+        "updateButton": "Cập nhật",
+        "updated": "Đã cập nhật hồ sơ thành công.",
+        "updateFailed": "Không thể cập nhật hồ sơ lúc này, vui lòng thử lại.",
+        "avatar": {
+          "invalidType": "Ảnh đại diện chỉ hỗ trợ PNG, JPG hoặc WebP.",
+          "tooLarge": "Ảnh đại diện vượt quá dung lượng tối đa 10MB.",
+          "updated": "Đã cập nhật ảnh đại diện.",
+          "readFailed": "Không thể đọc ảnh đã chọn, vui lòng thử lại.",
+          "missingPath": "Thiếu đường dẫn ảnh đã chọn"
+        },
+        "unsupportedUpdate": "Đã chuyển sang chế độ cập nhật hồ sơ mới."
+      }
+    },
+    "settings": {
+      "title": "Cài đặt",
+      "subtitle": "Quản lý giao diện, ngôn ngữ và truy cập hồ sơ cá nhân.",
+      "profile": "Xem hồ sơ",
+      "appearance": "Giao diện",
+      "theme": {
+        "title": "Chế độ tối / sáng",
+        "darkOn": "Đang dùng chế độ tối",
+        "lightOn": "Đang dùng chế độ sáng"
+      },
+      "language": {
+        "title": "Ngôn ngữ",
+        "note": "Ứng dụng sẽ gửi `Accept-Language` tới backend.",
+        "backendAwareTitle": "Hỗ trợ backend",
+        "backendAwareDescription": "Nội dung động như tên môn học, bài tập và thông báo từ giảng viên sẽ lấy đúng ngôn ngữ từ backend. Nhãn giao diện dùng key cục bộ để dễ mở rộng sang file JSON/ARB sau này."
+      },
+      "logout": "Đăng xuất"
+    }
+  }
+}

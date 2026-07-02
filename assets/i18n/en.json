@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "UniBuddy",
+    "unsupportedRole": {
+      "message": "Role {role} is not supported in the frontend yet."
+    }
+  },
+  "common": {
+    "logout": "Log out",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "vietnamese": "Vietnamese",
+    "english": "English"
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "password": "Password"
+    },
+    "validation": {
+      "emailRequired": "Please enter your email",
+      "emailInvalid": "Invalid email",
+      "passwordRequired": "Please enter your password"
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in with your UniBuddy account.",
+      "forgotPassword": "Forgot password?",
+      "button": "Sign in",
+      "google": "Sign in with Google",
+      "register": "Create a new user account",
+      "error": "Sign in failed, please try again.",
+      "googleError": "Google sign in failed, please try again.",
+      "tempPasswordMismatch": "This account does not use a temporary password. Please contact an administrator for help.",
+      "tempPasswordRequired": "This account is using a temporary password. Please change it to continue.",
+      "tempPasswordUpdateFailed": "Temporary password update failed. Please try again with a valid new password."
+    },
+    "passwordChange": {
+      "title": "Change temporary password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "minLength": "Password must be at least 8 characters",
+      "mismatch": "Confirmation password does not match",
+      "update": "Update"
+    },
+    "register": {
+      "title": "Create student account",
+      "subtitle": "Fill in basic study information to start using UniBuddy.",
+      "fullName": "Full name",
+      "studentId": "Student ID",
+      "phone": "Phone number (optional)",
+      "major": "Major",
+      "cohort": "Cohort",
+      "schoolCode": "School code (optional, e.g. HUST)",
+      "button": "Complete registration",
+      "success": "{message}. You can sign in right away.",
+      "error": "Unable to register, please try again.",
+      "requiredName": "Please enter your name",
+      "requiredStudentId": "Please enter your student ID",
+      "requiredPassword": "Please enter your password",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordMismatch": "Confirmation password does not match"
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "subtitle": "Enter the account email to receive a password reset verification code.",
+      "button": "Send verification code",
+      "error": "Unable to send verification code, please try again."
+    },
+    "otp": {
+      "title": "Verify code",
+      "subtitle": "A 6-digit code was sent to {email}.",
+      "code": "Verification code",
+      "button": "Verify",
+      "resend": "Resend code",
+      "resendSuccess": "A new verification code has been sent.",
+      "error": "Unable to verify code, please try again.",
+      "resendError": "Unable to resend code, please try again.",
+      "validation": "Verification code must contain exactly 6 digits"
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Create a new password to protect your UniBuddy account.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "button": "Change password",
+      "success": "Password changed successfully. Please sign in again.",
+      "error": "Unable to change password, please try again.",
+      "requiredPassword": "Please enter a new password",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordMismatch": "Confirmation password does not match"
+    }
+  },
+  "student": {
+    "dashboard": {
+      "menu": {
+        "home": "Home",
+        "schedule": "Schedule",
+        "catalog": "Catalog",
+        "notifications": "Notifications",
+        "settings": "Settings"
+      },
+      "home": {
+        "greeting": "Good morning,",
+        "toggleThemeDark": "Switch to dark mode",
+        "toggleThemeLight": "Switch to light mode",
+        "gpaTitle": "GPA",
+        "gpaLabel": "Rank: {label} (4.0 scale)",
+        "target": "Target: {value} GPA",
+        "focusTitle": "Focus mode (Pomodoro)",
+        "focusSubtitle": "Start a 25-minute session to speed up assignment progress!",
+        "projectsTitle": "Projects & group projects",
+        "projectsCount": "{count} projects",
+        "scheduleTitle": "Today’s classes",
+        "scheduleEmpty": "You have no classes scheduled today",
+        "roleLeader": "Team leader",
+        "roleMember": "Member",
+        "appBarTitle": "Home",
+        "logout": "Log out",
+        "gpaLevel": {
+          "none": "No data yet",
+          "excellent": "Excellent",
+          "good": "Good",
+          "fair": "Fair"
+        },
+        "credits": "Credits: {completed}/{total}"
+      },
+      "catalog": {
+        "title": "Tools catalog",
+        "subtitle": "Explore the best student-life productivity tools",
+        "course": "Courses",
+        "schedule": "Schedule",
+        "grades": "Grades",
+        "focus": "Pomodoro",
+        "studyGroups": "Study groups",
+        "storage": "Storage",
+        "flashcard": "Flashcards",
+        "kanban": "Task Kanban",
+        "notes": "Notes",
+        "noCourses": "No courses were returned by the backend yet."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "unreadCount": "{count} unread notifications",
+        "markAll": "Mark all read",
+        "all": "All",
+        "unread": "Unread",
+        "allTypes": "All types",
+        "empty": "No notifications found",
+        "error": "Unable to load notifications.",
+        "readAllSuccess": "Marked all notifications as read",
+        "allRead": "You have read everything",
+        "close": "Close",
+        "viewAll": "View all notifications",
+        "bellTooltip": "Notifications",
+        "dropdownError": "Unable to load the latest notifications."
+      },
+      "schedule": {
+        "title": "Class Schedule",
+        "autoImport": "Auto import schedule",
+        "manualAdd": "Add schedule manually",
+        "importReadError": "Unable to read the selected TKB file on this device.",
+        "importNoCourses": "No course data yet.",
+        "importNoValidRows": "The file does not contain any valid TKB rows to import.",
+        "importTitle": "Auto import TKB",
+        "importValidRows": "Valid rows",
+        "importRowsToCheck": "Rows to check",
+        "importAutoCreatedCourses": "Auto-created courses",
+        "importSampleErrors": "A few error rows",
+        "importRowError": "Row {row}: {errors}",
+        "importDialogImport": "Import {count} rows",
+        "manualTitle": "Add schedule manually",
+        "manualCourse": "Course",
+        "manualDay": "Day",
+        "manualStartPeriod": "Start period",
+        "manualPeriodCount": "Periods",
+        "manualRoom": "Room",
+        "manualPeriodOverflow": "The schedule range cannot go beyond period 12.",
+        "manualSave": "Add schedule",
+        "manualNoCourses": "You need at least one course before adding schedule manually.",
+        "manualChooseCourse": "Please choose a course",
+        "manualSuccess": "Schedule added manually.",
+        "manualError": "Unable to add schedule right now, please try again.",
+        "importError": "Unable to import the schedule right now, please try again.",
+        "courseCodeUnknown": "No course code yet",
+        "periodRange": "Period {start} - {end}",
+        "roomUnknown": "Room not set yet",
+        "teacherUnknown": "Teacher not set yet",
+        "emptyToday": "You have no classes scheduled today",
+        "day": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
+      },
+      "profile": {
+        "title": "Profile",
+        "headerTitle": "Profile",
+        "fullName": "Full name",
+        "fullNameRequired": "Please enter your full name",
+        "email": "Email address",
+        "emailReadonly": "Email is managed by the backend and cannot be edited here.",
+        "phone": "Phone number",
+        "dataSection": "Personal data",
+        "status": "Status",
+        "role": "Role",
+        "updateButton": "Update",
+        "updated": "Profile updated successfully.",
+        "updateFailed": "Unable to update profile right now, please try again.",
+        "avatar": {
+          "invalidType": "Avatar images only support PNG, JPG, or WebP.",
+          "tooLarge": "Avatar image exceeds the maximum size of 10MB.",
+          "updated": "Avatar updated successfully.",
+          "readFailed": "Unable to read the selected image, please try again.",
+          "missingPath": "Missing selected avatar path"
+        },
+        "unsupportedUpdate": "Profile editing now uses the backend update flow."
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Manage appearance, language, and personal profile access.",
+      "profile": "Open Profile",
+      "appearance": "Appearance",
+      "theme": {
+        "title": "Dark / Light mode",
+        "darkOn": "Dark mode enabled",
+        "lightOn": "Light mode enabled"
+      },
+      "language": {
+        "title": "Language",
+        "note": "The app will send `Accept-Language` to the backend.",
+        "backendAwareTitle": "Backend aware content",
+        "backendAwareDescription": "Dynamic content such as course names, assignments, and lecturer notifications will be returned by the backend in the selected language. UI labels use local keys so they can later move to JSON/ARB files."
+      },
+      "logout": "Log out"
+    }
+  }
+}
