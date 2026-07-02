@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 
+import 'student_theme.dart';
+
 class FocusModeScreen extends StatefulWidget {
   const FocusModeScreen({super.key});
 
@@ -89,10 +91,11 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
   }
 
   void _showFinishedNotification() {
+    final colors = StudentThemeScope.colorsOf(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: colors.surface,
         title: const Row(
           children: [
             Icon(LucideIcons.sparkles, color: Colors.amber),
@@ -107,7 +110,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
           _activeMode == 'pomodoro'
               ? 'Tuyệt vời ! Bạn đã hoàn thành 25 phút tập trung. Hãy nghỉ ngơi một chút trước khi tiếp tục học.'
               : 'Đã hết thời gian nghỉ. Hãy quay lại học tập để duy trì sự tập trung.',
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(fontSize: 11, color: colors.textMuted),
         ),
         actions: [
           TextButton(
@@ -141,14 +144,16 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
   @override
   Widget build(BuildContext context) {
     final progress = _secondsRemaining / _totalSeconds;
+    final colors = StudentThemeScope.colorsOf(context);
 
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text(
           'Che do tap trung',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF0B1326),
+        backgroundColor: colors.background,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -165,9 +170,9 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   Colors.pinkAccent,
                 ),
                 const SizedBox(width: 8),
-                _buildModeButton('short', 'Nghi ngan (5m)', Colors.tealAccent),
+                _buildModeButton('short', 'Nghỉ ngắn (5m)', Colors.tealAccent),
                 const SizedBox(width: 8),
-                _buildModeButton('long', 'Nghi dai (15m)', Colors.blueAccent),
+                _buildModeButton('long', 'Nghỉ dài (15m)', Colors.blueAccent),
               ],
             ),
             const SizedBox(height: 48),
@@ -180,7 +185,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                 style: GoogleFonts.firaCode(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: colors.text,
                 ),
               ),
               circularStrokeCap: CircularStrokeCap.round,
@@ -189,7 +194,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   : _activeMode == 'short'
                   ? Colors.tealAccent
                   : Colors.blueAccent,
-              backgroundColor: Colors.white10,
+              backgroundColor: colors.overlay(0.08),
               animation: false,
             ),
             const SizedBox(height: 40),
@@ -197,9 +202,9 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
               padding: const EdgeInsets.all(16),
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.02),
+                color: colors.surface.withValues(alpha: 0.72),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                border: Border.all(color: colors.border),
               ),
               child: Column(
                 children: [
@@ -213,7 +218,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                     _currentQuote,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.grey[300],
+                      color: colors.textMuted,
                       height: 1.5,
                       fontStyle: FontStyle.italic,
                     ),
@@ -231,15 +236,13 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white10,
+                      color: colors.surfaceAlt,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
+                      border: Border.all(color: colors.border),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.rotateCcw,
-                      color: Colors.white,
+                      color: colors.text,
                       size: 20,
                     ),
                   ),
@@ -287,6 +290,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
 
   Widget _buildModeButton(String mode, String label, Color color) {
     final isSelected = _activeMode == mode;
+    final colors = StudentThemeScope.colorsOf(context);
     return GestureDetector(
       onTap: () => _setMode(mode),
       child: Container(
@@ -297,7 +301,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
               : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? color : Colors.white10,
+            color: isSelected ? color : colors.border,
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -306,7 +310,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
           style: TextStyle(
             fontSize: 10,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? color : Colors.grey[400],
+            color: isSelected ? color : colors.textSubtle,
           ),
         ),
       ),
