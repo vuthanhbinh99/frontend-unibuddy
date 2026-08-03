@@ -820,6 +820,24 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
                             height: 1.4,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              _openAiSummaryAssistant(
+                                initialTitle: file.name,
+                                initialContent: _buildLocalSummary(file),
+                                initialObjective: 'Tóm tắt nhanh để ôn tập',
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.auto_awesome_outlined,
+                              size: 16,
+                            ),
+                            label: const Text('Tóm tắt nội dung với AI'),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -840,6 +858,13 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
                             ),
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 10),
+                      IconButton.filledTonal(
+                        onPressed: () => _reportDocument(file),
+                        icon: const Icon(Icons.flag_outlined),
+                        color: const Color(0xFFF2B84B),
+                        tooltip: 'Báo cáo tài liệu',
                       ),
                       const SizedBox(width: 10),
                       IconButton.filledTonal(
@@ -902,6 +927,86 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }
   }
 
+  Future<void> _reportDocument(StudentStorageFile file) async {
+    final colors = StudentThemeScope.colorsOf(context);
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Báo cáo tài liệu', style: TextStyle(color: colors.text)),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mô tả lý do báo cáo "${file.name}" để quản trị viên xem xét.',
+                style: TextStyle(color: colors.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: controller,
+                maxLines: 4,
+                maxLength: 1000,
+                autofocus: true,
+                style: TextStyle(color: colors.text),
+                decoration: InputDecoration(
+                  hintText: 'Ví dụ: Tài liệu vi phạm bản quyền, nội dung sai...',
+                  hintStyle: TextStyle(color: colors.textMuted),
+                ),
+                validator: (value) {
+                  if ((value ?? '').trim().length < 10) {
+                    return 'Vui lòng nhập lý do (tối thiểu 10 ký tự).';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(context, controller.text.trim());
+              }
+            },
+            child: const Text('Gửi báo cáo'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+
+    if (reason == null) {
+      return;
+    }
+
+    try {
+      await widget.studentApi.reportDocument(
+        documentId: file.id,
+        reason: reason,
+      );
+      if (mounted) {
+        _showSnack('Đã gửi báo cáo cho quản trị viên.');
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        _showSnack(error.message);
+      }
+    }
+  }
+
   Future<void> _copyLink(StudentStorageFile file) async {
     await Clipboard.setData(ClipboardData(text: file.downloadUrl));
     if (mounted) {
@@ -915,7 +1020,11 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
         '${file.visibility.label.toLowerCase()} và được cập nhật ${file.updatedLabel}.';
   }
 
-  void _showAiCoPilot() {
+  void _openAiSummaryAssistant({
+    String? initialTitle,
+    String? initialContent,
+    String? initialObjective,
+  }) {
     final colors = StudentThemeScope.colorsOf(context);
     showModalBottomSheet(
       context: context,
@@ -925,120 +1034,18 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.8,
-          maxChildSize: 0.95,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: colors.borderStrong,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      const _AssistantIcon(),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'UniBuddy Co-pilot',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: colors.text,
-                            ),
-                          ),
-                          Text(
-                            'AI trợ lý đồng hành cùng kho học tập',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Divider(height: 1, color: colors.border),
-                Expanded(
-                  child: ListView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(20),
-                    children: const [
-                      _ChatBubble(
-                        text:
-                            'Xin chào! Mình có thể giúp bạn rà soát tài liệu, gợi ý nhóm tệp quan trọng và tóm tắt nhanh kho lưu trữ UniBuddy.',
-                        isAi: true,
-                      ),
-                      _ChatBubble(
-                        text:
-                            'Tóm tắt giúp mình các tài liệu mới nhất trong kho.',
-                        isAi: false,
-                      ),
-                      _ChatBubble(
-                        text:
-                            'Bạn có thể mở từng tài liệu để xem tóm tắt metadata hiện có. Khi backend bổ sung AI/Gemini, phần này sẽ nối API phân tích nội dung thật.',
-                        isAi: true,
-                      ),
-                    ],
-                  ),
-                ),
-                _buildChatInputField(),
-              ],
-            );
-          },
+        return _AiSummaryAssistantSheet(
+          studentApi: widget.studentApi,
+          initialTitle: initialTitle,
+          initialContent: initialContent,
+          initialObjective: initialObjective,
         );
       },
     );
   }
 
-  Widget _buildChatInputField() {
-    final colors = StudentThemeScope.colorsOf(context);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border(top: BorderSide(color: colors.border)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              style: TextStyle(color: colors.text),
-              decoration: InputDecoration(
-                hintText: 'Hỏi Co-pilot...',
-                hintStyle: TextStyle(color: colors.textSubtle, fontSize: 13),
-                filled: true,
-                fillColor: colors.background,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            onPressed: () =>
-                _showSnack('Backend chưa có API chat AI cho lưu trữ.'),
-            icon: Icon(Icons.send, color: colors.primaryStrong),
-          ),
-        ],
-      ),
-    );
+  void _showAiCoPilot() {
+    _openAiSummaryAssistant();
   }
 
   void _showSnack(String message) {
@@ -1360,52 +1367,279 @@ class _AvatarInitial extends StatelessWidget {
   }
 }
 
-class _AssistantIcon extends StatelessWidget {
-  const _AssistantIcon();
+class _AiSummaryAssistantSheet extends StatefulWidget {
+  const _AiSummaryAssistantSheet({
+    required this.studentApi,
+    this.initialTitle,
+    this.initialContent,
+    this.initialObjective,
+  });
+
+  final StudentApiService studentApi;
+  final String? initialTitle;
+  final String? initialContent;
+  final String? initialObjective;
+
+  @override
+  State<_AiSummaryAssistantSheet> createState() =>
+      _AiSummaryAssistantSheetState();
+}
+
+class _AiSummaryAssistantSheetState extends State<_AiSummaryAssistantSheet> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _contentController;
+  late final TextEditingController _objectiveController;
+  bool _isLoading = false;
+  String? _error;
+  Map<String, dynamic>? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initialTitle ?? '');
+    _contentController = TextEditingController(
+      text: widget.initialContent ?? '',
+    );
+    _objectiveController = TextEditingController(
+      text: widget.initialObjective ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    _objectiveController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: colors.primaryStrong.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(Icons.auto_awesome, color: colors.primaryStrong),
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.84,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 14,
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: colors.borderStrong,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colors.primaryStrong.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: colors.primaryStrong,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'AI tóm tắt tài liệu',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Dán nội dung tài liệu, AI sẽ tóm tắt và gợi ý ôn tập.',
+                style: TextStyle(color: colors.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              _StorageTextField(controller: _titleController, label: 'Tiêu đề'),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _contentController,
+                maxLines: 8,
+                style: TextStyle(color: colors.text),
+                decoration: _sheetInputDecoration(
+                  context,
+                  'Nội dung tài liệu',
+                  hint: 'Dán nội dung văn bản cần tóm tắt...',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _objectiveController,
+                maxLines: 2,
+                style: TextStyle(color: colors.text),
+                decoration: _sheetInputDecoration(
+                  context,
+                  'Mục tiêu (tùy chọn)',
+                  hint: 'Ví dụ: chuẩn bị thi cuối kỳ trong 3 ngày',
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _submit,
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome_outlined),
+                  label: Text(
+                    _isLoading ? 'Đang tóm tắt...' : 'Tóm tắt bằng AI',
+                  ),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(
+                  _error!,
+                  style: TextStyle(color: colors.danger, fontSize: 12),
+                ),
+              ],
+              if (_result != null) ...[
+                const SizedBox(height: 14),
+                _AiSummaryResultCard(result: _result!),
+              ],
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _submit() async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+
+    if (title.length < 3) {
+      setState(() => _error = 'Tiêu đề cần ít nhất 3 ký tự.');
+      return;
+    }
+    if (content.length < 30) {
+      setState(() => _error = 'Nội dung cần ít nhất 30 ký tự để AI tóm tắt.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final response = await widget.studentApi.summarizeDocumentWithAi(
+        title: title,
+        content: content,
+        objective: _objectiveController.text,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _result = response;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _error = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }
 
-class _ChatBubble extends StatelessWidget {
-  const _ChatBubble({required this.text, required this.isAi});
+class _AiSummaryResultCard extends StatelessWidget {
+  const _AiSummaryResultCard({required this.result});
 
-  final String text;
-  final bool isAi;
+  final Map<String, dynamic> result;
 
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
-    return Align(
-      alignment: isAi ? Alignment.centerLeft : Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.all(12),
-        constraints: const BoxConstraints(maxWidth: 280),
-        decoration: BoxDecoration(
-          color: isAi ? colors.surface : colors.primaryStrong,
-          borderRadius: BorderRadius.circular(16).copyWith(
-            topLeft: isAi ? Radius.zero : const Radius.circular(16),
-            topRight: isAi ? const Radius.circular(16) : Radius.zero,
+    final summary = result['tomTatNgan']?.toString() ?? 'Không có tóm tắt';
+    final keyPoints = (result['yChinh'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .toList();
+    final suggestions = (result['deXuatOnTap'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString())
+        .toList();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Kết quả AI',
+            style: TextStyle(
+              color: colors.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
           ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            color: isAi ? colors.text : colors.onPrimary,
-          ),
-        ),
+          const SizedBox(height: 8),
+          Text(summary, style: TextStyle(color: colors.text, height: 1.4)),
+          if (keyPoints.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Ý chính',
+              style: TextStyle(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            ...keyPoints.take(6).map((item) => Text('- $item')),
+          ],
+          if (suggestions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Đề xuất ôn tập',
+              style: TextStyle(
+                color: colors.textMuted,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            ...suggestions.take(6).map((item) => Text('- $item')),
+          ],
+        ],
       ),
     );
   }
