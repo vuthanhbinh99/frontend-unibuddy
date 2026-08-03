@@ -25,18 +25,13 @@ class StudentGradeComponent {
 }
 
 class StudentGradeWeightInput {
-  const StudentGradeWeightInput({
-    required this.name,
-    required this.weight,
-    required this.score,
-  });
+  const StudentGradeWeightInput({required this.name, required this.weight});
 
   final String name;
   final double weight;
-  final double? score;
 
   Map<String, Object?> toJson() {
-    return {'tenThanhPhan': name, 'trongSo': weight, 'diem': score};
+    return {'tenThanhPhan': name, 'trongSo': weight};
   }
 }
 
