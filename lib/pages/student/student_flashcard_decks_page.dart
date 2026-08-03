@@ -7,6 +7,8 @@ import '../../models/student_course_models.dart';
 import '../../models/student_flashcard_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
+import 'student_flashcard_editors.dart';
+import 'student_flashcard_manage_page.dart';
 import 'student_theme.dart';
 import 'widgets/student_notification_dropdown.dart';
 
@@ -61,14 +63,12 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
       final results = await Future.wait<Object>([
         widget.studentApi.listFlashcardDecks(courseId: _selectedCourseId),
         widget.studentApi.getFlashcardStatistics(),
-        if (_courses.isEmpty) widget.studentApi.listCourses(),
+        widget.studentApi.listCourses(tatCa: true),
       ]);
 
       final deckData = results[0] as StudentFlashcardDeckData;
       final statsData = results[1] as StudentFlashcardStatisticsData;
-      final courses = results.length > 2
-          ? (results[2] as StudentCourseData).items
-          : _courses;
+      final courses = (results[2] as StudentCourseData).items;
 
       if (!mounted) {
         return;
@@ -307,7 +307,12 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
             _deckColors[stableDeckColorIndex(deck, index) % _deckColors.length];
         return GestureDetector(
           onTap: () => _openStudy(deck, color),
-          child: _AsymmetricDeckCard(deck: deck, index: index, color: color),
+          child: _AsymmetricDeckCard(
+            deck: deck,
+            index: index,
+            color: color,
+            onDelete: () => _confirmDeleteDeck(deck),
+          ),
         );
       },
     );
@@ -364,6 +369,54 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     }
   }
 
+  Future<void> _confirmDeleteDeck(StudentFlashcardDeck deck) async {
+    final colors = StudentThemeScope.colorsOf(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.surface,
+        title: Text('Xóa bộ Flashcard', style: TextStyle(color: colors.text)),
+        content: Text(
+          'Bạn có chắc muốn xóa bộ "${deck.title}"? '
+          'Toàn bộ ${deck.cardCount} thẻ và tiến độ ôn tập sẽ bị xóa vĩnh viễn.',
+          style: TextStyle(color: colors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: colors.danger),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await widget.studentApi.deleteFlashcardDeck(deck.id);
+      if (!mounted) {
+        return;
+      }
+      _showSnack('Đã xóa bộ "${deck.title}".');
+      await _loadData(silent: true);
+    } on ApiException catch (error) {
+      if (mounted) {
+        _showSnack(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnack('Không thể xóa bộ Flashcard lúc này.');
+      }
+    }
+  }
+
   double _averageProgress() {
     if (_decks.isEmpty) {
       return 0;
@@ -415,6 +468,12 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   int _forgotCount = 0;
   int _reviewCount = 0;
   int _masteredCount = 0;
+  DateTime? _cardShownAt;
+  String? _selectedQuizOption;
+  bool _quizAnswered = false;
+  final Map<String, int> _soLanLamLai = {};
+  bool _sessionResultSent = false;
+  bool _aiOverlayOpen = false;
 
   @override
   void initState() {
@@ -449,7 +508,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     return (_currentIndex / _cards.length).clamp(0, 1).toDouble();
   }
 
-  Future<void> _loadReview({bool silent = false}) async {
+  Future<void> _loadReview({bool silent = false, bool hocLai = false}) async {
     if (!silent) {
       setState(() {
         _loading = true;
@@ -458,7 +517,10 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
 
     try {
-      final data = await widget.studentApi.startFlashcardReview(widget.deck.id);
+      final data = await widget.studentApi.startFlashcardReview(
+        widget.deck.id,
+        hocLai: hocLai,
+      );
       if (!mounted) {
         return;
       }
@@ -468,6 +530,13 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
         _isFlipped = false;
         _loading = false;
         _errorMessage = null;
+        _soLanLamLai.clear();
+        _sessionResultSent = false;
+        _totalStudied = 0;
+        _forgotCount = 0;
+        _reviewCount = 0;
+        _masteredCount = 0;
+        _resetCardState();
       });
       _flipController.reset();
     } on ApiException catch (error) {
@@ -487,6 +556,12 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
         _errorMessage = 'Không thể tải phiên ôn tập lúc này.';
       });
     }
+  }
+
+  void _resetCardState() {
+    _cardShownAt = DateTime.now();
+    _selectedQuizOption = null;
+    _quizAnswered = false;
   }
 
   void _toggleFlip() {
@@ -519,6 +594,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
         switch (level) {
           case StudentFlashcardMemoryLevel.forgot:
             _forgotCount++;
+            _requeueCard(card);
             break;
           case StudentFlashcardMemoryLevel.review:
             _reviewCount++;
@@ -569,7 +645,10 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
               const SizedBox(height: 24),
               Expanded(child: _buildCardArea(card)),
               const SizedBox(height: 24),
-              if (card != null) _buildControls() else const SizedBox.shrink(),
+              if (card != null && !card.isQuiz)
+                _buildControls()
+              else
+                const SizedBox.shrink(),
               const SizedBox(height: 12),
             ],
           ),
@@ -596,69 +675,143 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
             color: colors.text,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.analytics_outlined),
-          onPressed: _showStatsDialog,
-          style: IconButton.styleFrom(backgroundColor: colors.surfaceAlt),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit_note_outlined),
+              tooltip: 'Quản lý thẻ',
+              onPressed: _openManageCards,
+              style: IconButton.styleFrom(backgroundColor: colors.surfaceAlt),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.analytics_outlined),
+              onPressed: _showStatsDialog,
+              style: IconButton.styleFrom(backgroundColor: colors.surfaceAlt),
+            ),
+          ],
         ),
       ],
     );
   }
 
+  Future<void> _openManageCards() async {
+    await Navigator.push<void>(
+      context,
+      studentThemedRoute(
+        context: context,
+        builder: (_) => StudentFlashcardManagePage(
+          studentApi: widget.studentApi,
+          deck: widget.deck,
+          accentColor: widget.accentColor,
+        ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadReview(silent: true);
+    await widget.onDeckChanged?.call();
+  }
+
   Widget _buildImportPanel() {
     final colors = StudentThemeScope.colorsOf(context);
-    return GestureDetector(
-      onTap: _importCards,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colors.primaryStrong.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.file_upload_outlined,
-                color: colors.primaryStrong,
-              ),
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: _importCards,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.border),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'BỘ BÀI: ${widget.deck.title.toUpperCase()}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: colors.primaryStrong,
-                      letterSpacing: 1.2,
-                    ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colors.primaryStrong.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Nhấn để tải CSV/XLSX...',
-                    style: TextStyle(fontSize: 14, color: colors.text),
+                  child: Icon(
+                    Icons.file_upload_outlined,
+                    color: colors.primaryStrong,
                   ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'BỘ BÀI: ${widget.deck.title.toUpperCase()}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: colors.primaryStrong,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Nhấn để tải CSV/XLSX hoặc tạo nhanh với AI',
+                        style: TextStyle(fontSize: 14, color: colors.text),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'Thẻ ${_cards.isEmpty ? 0 : (_currentIndex < _cards.length ? _currentIndex + 1 : _cards.length)} / ${_cards.length}',
+                  style: TextStyle(fontSize: 12, color: colors.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+        _buildAiGenerateButton(),
+      ],
+    );
+  }
+
+  Widget _buildAiGenerateButton() {
+    final colors = StudentThemeScope.colorsOf(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _addCardManually,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Nhập thủ công'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.primaryStrong,
+                side: BorderSide(
+                  color: colors.primaryStrong.withValues(alpha: 0.35),
+                ),
               ),
             ),
-            Text(
-              'Thẻ ${_cards.isEmpty ? 0 : (_currentIndex < _cards.length ? _currentIndex + 1 : _cards.length)} / ${_cards.length}',
-              style: TextStyle(fontSize: 12, color: colors.textMuted),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _importCardsWithAi,
+              icon: const Icon(Icons.description_outlined, size: 18),
+              label: const Text('Import PDF/DOCX'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.primaryStrong,
+                side: BorderSide(
+                  color: colors.primaryStrong.withValues(alpha: 0.35),
+                ),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -680,6 +833,10 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
 
     if (card == null) {
       return _buildCompletedState();
+    }
+
+    if (card.isQuiz) {
+      return _buildQuizFlipArea(card);
     }
 
     return Center(
@@ -713,6 +870,316 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
             );
           },
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleQuizAnswer(
+    StudentFlashcardCard card,
+    String optionId,
+  ) async {
+    if (_quizAnswered || _savingProgress) {
+      return;
+    }
+    final quiz = card.quizContent;
+    if (quiz == null) {
+      return;
+    }
+
+    final isCorrect = optionId == quiz.correctAnswer;
+    final responseMs = _cardShownAt == null
+        ? 0
+        : DateTime.now().difference(_cardShownAt!).inMilliseconds;
+
+    setState(() {
+      _selectedQuizOption = optionId;
+      _quizAnswered = true;
+      _savingProgress = true;
+    });
+
+    try {
+      await widget.studentApi.submitFlashcardResult(
+        cardId: card.id,
+        result: isCorrect
+            ? StudentFlashcardResult.correct
+            : StudentFlashcardResult.wrong,
+        responseMs: responseMs,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _totalStudied++;
+        if (isCorrect) {
+          _masteredCount++;
+        } else {
+          _forgotCount++;
+          _requeueCard(card);
+        }
+        _savingProgress = false;
+      });
+      // Lộ đáp án: tự động lật sang mặt sau sau khi đã chấm.
+      if (!_isFlipped) {
+        _flipController.forward();
+        setState(() => _isFlipped = true);
+      }
+      await widget.onDeckChanged?.call();
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(() => _savingProgress = false);
+        _showSnack(error.message);
+      }
+    }
+  }
+
+  Widget _buildQuizFlipArea(StudentFlashcardCard card) {
+    return GestureDetector(
+      // Chỉ cho phép lật thủ công sau khi đã trả lời (tránh xem trước đáp án).
+      onTap: _quizAnswered ? _toggleFlip : null,
+      child: AnimatedBuilder(
+        animation: _flipAnimation,
+        builder: (context, child) {
+          final angle = _flipAnimation.value * math.pi;
+          final isBack = angle > math.pi / 2;
+          return Transform(
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(angle),
+            alignment: Alignment.center,
+            child: isBack
+                ? Transform(
+                    transform: Matrix4.identity()..rotateY(math.pi),
+                    alignment: Alignment.center,
+                    child: _buildQuizBack(card),
+                  )
+                : _buildQuizFront(card),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildQuizFront(StudentFlashcardCard card) {
+    final colors = StudentThemeScope.colorsOf(context);
+    final quiz = card.quizContent!;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: colors.surfaceAlt.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colors.border),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.quiz_outlined, color: colors.primaryStrong),
+                    const SizedBox(width: 8),
+                    Text(
+                      'TRẮC NGHIỆM',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  quiz.question,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    color: colors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...quiz.options.map((option) => _buildQuizOption(card, quiz, option)),
+          if (_quizAnswered)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Nhấn vào thẻ để xem đáp án & giải thích',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1.1,
+                  color: colors.textSubtle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuizBack(StudentFlashcardCard card) {
+    final quiz = card.quizContent!;
+    return SingleChildScrollView(child: _buildQuizExplanation(quiz));
+  }
+
+  Widget _buildQuizOption(
+    StudentFlashcardCard card,
+    StudentFlashcardQuizContent quiz,
+    StudentFlashcardQuizOption option,
+  ) {
+    final colors = StudentThemeScope.colorsOf(context);
+    const correctColor = Color(0xFF4ADE80);
+    const wrongColor = Color(0xFFFF6B6B);
+
+    final isCorrectOption = option.id == quiz.correctAnswer;
+    final isSelected = option.id == _selectedQuizOption;
+
+    Color background = colors.surface;
+    Color borderColor = colors.border;
+    Color textColor = colors.text;
+    IconData? trailingIcon;
+    Color? iconColor;
+
+    if (_quizAnswered) {
+      if (isCorrectOption) {
+        background = correctColor.withValues(alpha: 0.18);
+        borderColor = correctColor;
+        trailingIcon = Icons.check_circle;
+        iconColor = correctColor;
+      } else if (isSelected) {
+        background = wrongColor.withValues(alpha: 0.16);
+        borderColor = wrongColor;
+        trailingIcon = Icons.cancel;
+        iconColor = wrongColor;
+      } else {
+        textColor = colors.textMuted;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: _quizAnswered || _savingProgress
+            ? null
+            : () => _handleQuizAnswer(card, option.id),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: 1.4),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: borderColor.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  option.id,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: borderColor == colors.border
+                        ? colors.textMuted
+                        : borderColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  option.content,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: textColor,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              if (trailingIcon != null)
+                Icon(trailingIcon, color: iconColor, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuizExplanation(StudentFlashcardQuizContent quiz) {
+    final colors = StudentThemeScope.colorsOf(context);
+    final isCorrect = _selectedQuizOption == quiz.correctAnswer;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.primaryStrong.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.primaryStrong.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isCorrect ? Icons.emoji_events_outlined : Icons.lightbulb_outline,
+                color: colors.primaryStrong,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                isCorrect ? 'Chính xác!' : 'Đáp án đúng: ${quiz.correctAnswer}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: colors.primaryStrong,
+                ),
+              ),
+            ],
+          ),
+          if (quiz.explanation.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              quiz.explanation,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: colors.text,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _savingProgress ? null : _nextCard,
+              icon: const Icon(Icons.arrow_forward),
+              label: Text(
+                _currentIndex + 1 >= _cards.length
+                    ? 'Hoàn thành'
+                    : 'Câu tiếp theo',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primaryStrong,
+                foregroundColor: colors.onPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -811,6 +1278,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
 
   Widget _buildCompletedState() {
     final colors = StudentThemeScope.colorsOf(context);
+    final coHocThe = _totalStudied > 0;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -833,10 +1301,53 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
           ),
           const SizedBox(height: 8),
           Text(
-            'Bạn đã ôn tập xong tất cả các thẻ đang cần học trong bộ bài này.',
+            coHocThe
+                ? 'Bạn đã ôn tập xong lượt học này. Kết quả của bạn:'
+                : 'Bạn đã ôn tập xong tất cả các thẻ đang cần học trong bộ bài này.',
             textAlign: TextAlign.center,
             style: TextStyle(color: colors.textMuted, fontSize: 13),
           ),
+          if (coHocThe) ...[
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _StudyStatItem('Đúng', _masteredCount, const Color(0xFF4ADE80)),
+                _StudyStatItem('Sai', _forgotCount, const Color(0xFFFF6B6B)),
+                _StudyStatItem('Tổng', _totalStudied, colors.primaryStrong),
+              ],
+            ),
+            if (_forgotCount > 0) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.primaryStrong.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: colors.primaryStrong.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_active_outlined,
+                      color: colors.primaryStrong,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Các thẻ làm sai đã được đưa lại để bạn ôn; '
+                        'xem chi tiết ở chuông thông báo.',
+                        style: TextStyle(color: colors.text, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: _restartDeck,
@@ -978,27 +1489,361 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  void _showAiOverlay(String message) {
+    if (_aiOverlayOpen) {
+      return;
+    }
+    _aiOverlayOpen = true;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final colors = StudentThemeScope.colorsOf(context);
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: colors.border),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colors.primaryStrong,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _closeAiOverlay() {
+    if (!_aiOverlayOpen) {
+      return;
+    }
+    _aiOverlayOpen = false;
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context, rootNavigator: true).pop();
+  }
+
+  Future<void> _importCardsWithAi() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'docx', 'txt', 'md'],
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      _showSnack('Không thể đọc nội dung file đã chọn.');
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+    final loaiThe = await _showImportTypeSheet();
+    if (loaiThe == null) {
+      return;
+    }
+    final laTuLuan = loaiThe == StudentFlashcardCardType.essay;
+
+    _showAiOverlay('AI đang phân tích tài liệu, vui lòng đợi…');
+
+    try {
+      final imported = laTuLuan
+          ? await widget.studentApi.aiImportEssayFlashcards(
+              deckId: widget.deck.id,
+              bytes: bytes,
+              fileName: file.name,
+            )
+          : await widget.studentApi.aiImportFlashcards(
+              deckId: widget.deck.id,
+              bytes: bytes,
+              fileName: file.name,
+            );
+      _closeAiOverlay();
+      if (!mounted) {
+        return;
+      }
+      final total = imported.cards.isNotEmpty
+          ? imported.cards.length
+          : imported.importedCount;
+      _showSnack(
+        imported.message.isEmpty
+            ? (laTuLuan
+                  ? 'AI đã tạo $total thẻ tự luận.'
+                  : 'AI đã tạo $total thẻ trắc nghiệm.')
+            : imported.message,
+      );
+      await _loadReview(silent: true);
+      await widget.onDeckChanged?.call();
+    } on ApiException catch (error) {
+      _closeAiOverlay();
+      if (mounted) {
+        _showSnack(error.message);
+      }
+    } catch (_) {
+      _closeAiOverlay();
+      if (mounted) {
+        _showSnack('Không thể phân tích tài liệu lúc này.');
+      }
+    }
+  }
+
+  Future<StudentFlashcardCardType?> _showImportTypeSheet() {
+    final colors = StudentThemeScope.colorsOf(context);
+    return showModalBottomSheet<StudentFlashcardCardType>(
+      context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: colors.borderStrong,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Tạo thẻ dạng nào?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.text,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Chọn định dạng phù hợp với nội dung tài liệu bạn vừa tải lên.',
+                  style: TextStyle(fontSize: 13, color: colors.textMuted),
+                ),
+                const SizedBox(height: 16),
+                _buildImportTypeOption(
+                  sheetContext: sheetContext,
+                  colors: colors,
+                  icon: Icons.quiz_outlined,
+                  title: 'Trắc nghiệm',
+                  subtitle: 'Câu hỏi nhiều lựa chọn có đáp án đúng',
+                  value: StudentFlashcardCardType.quiz,
+                ),
+                const SizedBox(height: 10),
+                _buildImportTypeOption(
+                  sheetContext: sheetContext,
+                  colors: colors,
+                  icon: Icons.notes_outlined,
+                  title: 'Tự luận',
+                  subtitle: 'Thẻ hỏi - đáp dạng ghi nhớ nội dung',
+                  value: StudentFlashcardCardType.essay,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildImportTypeOption({
+    required BuildContext sheetContext,
+    required StudentThemeColors colors,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required StudentFlashcardCardType value,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => Navigator.of(sheetContext).pop(value),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.surfaceAlt,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.primaryStrong.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: colors.primaryStrong),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: colors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12.5, color: colors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: colors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addCardManually() async {
+    final type = await pickStudentFlashcardCardType(context);
+    if (type == null || !mounted) {
+      return;
+    }
+
+    try {
+      if (type == StudentFlashcardCardType.essay) {
+        final draft = await showStudentFlashcardEssayEditor(context);
+        if (draft == null) {
+          return;
+        }
+        await widget.studentApi.createFlashcard(
+          deckId: widget.deck.id,
+          front: draft.front,
+          back: draft.back,
+        );
+      } else {
+        final draft = await showStudentFlashcardQuizEditor(context);
+        if (draft == null) {
+          return;
+        }
+        await widget.studentApi.createQuizFlashcard(
+          deckId: widget.deck.id,
+          quiz: draft,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+      _showSnack('Đã thêm thẻ mới.');
+      await _loadReview(silent: true);
+      await widget.onDeckChanged?.call();
+    } on ApiException catch (error) {
+      if (mounted) {
+        _showSnack(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showSnack('Không thể thêm thẻ lúc này.');
+      }
+    }
+  }
+
+  void _requeueCard(StudentFlashcardCard card) {
+    // Đưa thẻ làm sai quay lại cuối phiên; giới hạn mỗi thẻ tối đa 1 lần
+    // để tránh phiên học kéo dài vô hạn khi liên tục trả lời sai.
+    final soLan = _soLanLamLai[card.id] ?? 0;
+    if (soLan >= 1) {
+      return;
+    }
+    _soLanLamLai[card.id] = soLan + 1;
+    _cards.add(card);
+  }
+
+  Future<void> _recordSessionResult() async {
+    if (_sessionResultSent) {
+      return;
+    }
+    // Không có gì để ghi khi chưa học thẻ nào.
+    if (_masteredCount == 0 && _forgotCount == 0) {
+      return;
+    }
+    _sessionResultSent = true;
+    try {
+      await widget.studentApi.recordFlashcardSessionResult(
+        deckId: widget.deck.id,
+        correct: _masteredCount,
+        wrong: _forgotCount,
+      );
+      await widget.onDeckChanged?.call();
+    } catch (_) {
+      // Ghi kết quả phiên là best-effort; không chặn trải nghiệm học.
+      _sessionResultSent = false;
+    }
+  }
+
   void _nextCard() {
     if (_isFlipped) {
-      _flipController.reverse();
+      _flipController.reset();
       _isFlipped = false;
     }
 
     setState(() {
       _currentIndex++;
+      _resetCardState();
     });
 
     if (_currentIndex >= _cards.length) {
       _showSnack('Chúc mừng! Bạn đã hoàn thành lượt học bộ thẻ này.');
+      _recordSessionResult();
     }
   }
 
-  void _restartDeck() {
-    setState(() {
-      _currentIndex = 0;
-      _isFlipped = false;
-    });
-    _flipController.reset();
+  Future<void> _restartDeck() async {
+    // Tải lại toàn bộ thẻ của bộ (kể cả khi 0 thẻ tới hạn) rồi học lại từ đầu.
+    await _loadReview(hocLai: true);
   }
 
   void _showStatsDialog() {
@@ -1070,11 +1915,13 @@ class _AsymmetricDeckCard extends StatelessWidget {
     required this.deck,
     required this.index,
     required this.color,
+    this.onDelete,
   });
 
   final StudentFlashcardDeck deck;
   final int index;
   final Color color;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -1135,7 +1982,47 @@ class _AsymmetricDeckCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(_iconForDeck(deck), color: colors.textSubtle, size: 18),
+              if (onDelete != null)
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: PopupMenuButton<String>(
+                    padding: EdgeInsets.zero,
+                    tooltip: 'Tùy chọn',
+                    color: colors.surface,
+                    icon: Icon(
+                      _iconForDeck(deck),
+                      color: colors.textSubtle,
+                      size: 18,
+                    ),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        onDelete!();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                              color: colors.danger,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Xóa bộ',
+                              style: TextStyle(color: colors.danger),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Icon(_iconForDeck(deck), color: colors.textSubtle, size: 18),
             ],
           ),
           const SizedBox(height: 12),
