@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/auth_models.dart';
 import '../../services/api/modules/student_api_service.dart';
+import '../../services/local/frontend_preferences_service.dart';
+import '../../services/notifications/push_notification_service.dart';
 import 'student_feedback_screen.dart';
 import 'student_theme.dart';
 
@@ -11,6 +13,8 @@ class StudentSettingsTab extends StatefulWidget {
     super.key,
     required this.user,
     required this.studentApi,
+    required this.preferences,
+    required this.pushService,
     required this.currentSessionRefreshToken,
     required this.isDarkMode,
     required this.currentLanguageCode,
@@ -22,6 +26,8 @@ class StudentSettingsTab extends StatefulWidget {
 
   final PublicUser user;
   final StudentApiService studentApi;
+  final FrontendPreferencesService preferences;
+  final PushNotificationService pushService;
   final String currentSessionRefreshToken;
   final bool isDarkMode;
   final String currentLanguageCode;
@@ -42,7 +48,9 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
 
   double _cacheSize = 24.5;
   bool _appNotifications = true;
+  bool _isSavingAppNotifications = false;
   String _deadlineReminder = '12h';
+  bool _isSavingDeadlineReminder = false;
   bool _dailyFlashcard = true;
   String _flashcardTime = '20:00';
 
@@ -50,6 +58,170 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
   void initState() {
     super.initState();
     _loadSessions();
+    _loadAppNotificationPreference();
+    _loadDeadlineReminderPreference();
+    _loadFlashcardReminderPreference();
+  }
+
+  Future<void> _loadAppNotificationPreference() async {
+    try {
+      final enabled = await widget.studentApi.getAppNotificationPreference();
+      if (!mounted) {
+        return;
+      }
+      setState(() => _appNotifications = enabled);
+    } catch (_) {
+      // Giữ giá trị mặc định nếu không tải được; không chặn màn hình cài đặt.
+    }
+  }
+
+  Future<void> _saveAppNotificationPreference(bool value) async {
+    final previous = _appNotifications;
+    setState(() {
+      _appNotifications = value;
+      _isSavingAppNotifications = true;
+    });
+
+    try {
+      await widget.studentApi.updateAppNotificationPreference(value);
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        value
+            ? _text('Đã bật thông báo ứng dụng', 'App notifications enabled')
+            : _text('Đã tắt thông báo ứng dụng', 'App notifications disabled'),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _appNotifications = previous);
+      _showSnackBar(
+        _text('Không thể lưu tùy chọn thông báo', 'Could not save preference'),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingAppNotifications = false);
+      }
+    }
+  }
+
+  Future<void> _loadFlashcardReminderPreference() async {
+    final enabled = await widget.preferences.readFlashcardReminderEnabled();
+    final time = await widget.preferences.readFlashcardReminderTime();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _dailyFlashcard = enabled;
+      _flashcardTime = time;
+    });
+  }
+
+  /// Nội dung thông báo ôn tập theo ngôn ngữ hiện tại.
+  ({String title, String body}) _flashcardReminderContent() {
+    final isVietnamese = widget.currentLanguageCode == 'vi';
+    return (
+      title: isVietnamese ? 'Ôn tập Flashcard' : 'Flashcard review',
+      body: isVietnamese
+          ? 'Đã đến giờ ôn tập flashcard hôm nay. Cùng luyện tập nào!'
+          : "It's time to review your flashcards today. Let's practice!",
+    );
+  }
+
+  /// Đồng bộ lịch thông báo với trạng thái hiện tại: bật thì đặt lại lịch,
+  /// tắt thì huỷ.
+  Future<void> _applyFlashcardReminderSchedule() async {
+    if (!_dailyFlashcard) {
+      await widget.pushService.cancelDailyFlashcardReminder();
+      return;
+    }
+    final parts = _flashcardTime.split(':');
+    final hour = int.tryParse(parts.first) ?? 20;
+    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+    final content = _flashcardReminderContent();
+    await widget.pushService.scheduleDailyFlashcardReminder(
+      hour: hour,
+      minute: minute,
+      title: content.title,
+      body: content.body,
+    );
+  }
+
+  /// Chuyển số giờ trước hạn từ API sang giá trị dropdown.
+  /// `null` (mốc mặc định) hiển thị là '24h' để đồng nhất với UI.
+  static String _reminderValueFromHours(int? hours) {
+    switch (hours) {
+      case 0:
+        return '0h';
+      case 3:
+        return '3h';
+      case 12:
+        return '12h';
+      case 24:
+        return '24h';
+      default:
+        return '24h';
+    }
+  }
+
+  static int _reminderHoursFromValue(String value) {
+    switch (value) {
+      case '0h':
+        return 0;
+      case '3h':
+        return 3;
+      case '24h':
+        return 24;
+      case '12h':
+      default:
+        return 12;
+    }
+  }
+
+  Future<void> _loadDeadlineReminderPreference() async {
+    try {
+      final hours = await widget.studentApi.getDeadlineReminderPreference();
+      if (!mounted) {
+        return;
+      }
+      setState(() => _deadlineReminder = _reminderValueFromHours(hours));
+    } catch (_) {
+      // Giữ giá trị mặc định nếu không tải được; không chặn màn hình cài đặt.
+    }
+  }
+
+  Future<void> _saveDeadlineReminderPreference(String value) async {
+    final previous = _deadlineReminder;
+    setState(() {
+      _deadlineReminder = value;
+      _isSavingDeadlineReminder = true;
+    });
+
+    try {
+      await widget.studentApi.updateDeadlineReminderPreference(
+        _reminderHoursFromValue(value),
+      );
+      if (!mounted) {
+        return;
+      }
+      _showSnackBar(
+        _text('Đã lưu tùy chỉnh nhắc nhở', 'Reminder preference saved'),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _deadlineReminder = previous);
+      _showSnackBar(
+        _text('Không thể lưu tùy chỉnh nhắc nhở', 'Could not save preference'),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingDeadlineReminder = false);
+      }
+    }
   }
 
   @override
@@ -177,16 +349,28 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     );
     if (picked == null) return;
 
+    final newTime =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
     setState(() {
-      _flashcardTime =
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      _flashcardTime = newTime;
     });
+    await widget.preferences.saveFlashcardReminderTime(newTime);
+    await _applyFlashcardReminderSchedule();
+    if (!mounted) {
+      return;
+    }
     _showSnackBar(
       _text(
         'Đã cập nhật thời gian: $_flashcardTime',
         'Notification time updated: $_flashcardTime',
       ),
     );
+  }
+
+  Future<void> _toggleDailyFlashcard(bool value) async {
+    setState(() => _dailyFlashcard = value);
+    await widget.preferences.saveFlashcardReminderEnabled(value);
+    await _applyFlashcardReminderSchedule();
   }
 
   @override
@@ -466,8 +650,9 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
                       iconColor: const Color(0xFF6366F1),
                       title: _text('Thông báo ứng dụng', 'App notifications'),
                       value: _appNotifications,
-                      onChanged: (value) =>
-                          setState(() => _appNotifications = value),
+                      onChanged: _isSavingAppNotifications
+                          ? null
+                          : _saveAppNotificationPreference,
                     ),
                     const SizedBox(height: 10),
                     _DropdownRow(
@@ -491,11 +676,14 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
                           child: Text('Không nhắc'),
                         ),
                       ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _deadlineReminder = value);
-                        }
-                      },
+                      onChanged: _isSavingDeadlineReminder
+                          ? null
+                          : (value) {
+                              if (value != null &&
+                                  value != _deadlineReminder) {
+                                _saveDeadlineReminderPreference(value);
+                              }
+                            },
                     ),
                     const SizedBox(height: 10),
                     _SwitchRow(
@@ -507,8 +695,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
                         'Daily flashcard review',
                       ),
                       value: _dailyFlashcard,
-                      onChanged: (value) =>
-                          setState(() => _dailyFlashcard = value),
+                      onChanged: _toggleDailyFlashcard,
                     ),
                     if (_dailyFlashcard) ...[
                       const SizedBox(height: 10),
@@ -857,7 +1044,7 @@ class _SwitchRow extends StatelessWidget {
   final Color iconColor;
   final String title;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -901,7 +1088,7 @@ class _DropdownRow extends StatelessWidget {
   final String title;
   final String value;
   final List<DropdownMenuItem<String>> items;
-  final ValueChanged<String?> onChanged;
+  final ValueChanged<String?>? onChanged;
 
   @override
   Widget build(BuildContext context) {
