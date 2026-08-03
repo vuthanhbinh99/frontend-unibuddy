@@ -7,6 +7,7 @@ import '../../models/student_grade_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
+import 'widgets/student_assistant_chat_sheet.dart';
 import 'widgets/student_notification_dropdown.dart';
 
 class StudentCourseManagementPage extends StatefulWidget {
@@ -34,6 +35,7 @@ class _StudentCourseManagementPageState
     extends State<StudentCourseManagementPage> {
   late StudentCourseData _courseData;
   late StudentGradeTranscriptData _grades;
+  String? _selectedSemesterId;
   final TextEditingController _searchController = TextEditingController();
 
   double _targetGpa = 4.0;
@@ -41,8 +43,10 @@ class _StudentCourseManagementPageState
   String _sortBy = 'grade-desc';
   bool _isLinearFormula = false;
   bool _isLoading = false;
+  bool _isSavingSemester = false;
   bool _isSaving = false;
   bool _isProjecting = false;
+  int _reloadRequestId = 0;
   String? _projectionAdvice;
   Timer? _projectionDebounce;
 
@@ -51,6 +55,7 @@ class _StudentCourseManagementPageState
     super.initState();
     _courseData = widget.initialCourses;
     _grades = widget.initialGrades;
+    _selectedSemesterId = widget.initialCourses.selectedSemesterId;
     final currentGpa = _grades.summary.cumulativeGpa;
     if (currentGpa != null && currentGpa > 0) {
       _targetGpa = currentGpa.clamp(0, 4).toDouble();
@@ -127,6 +132,14 @@ class _StudentCourseManagementPageState
             ),
             onPressed: _showAdviceDialog,
           ),
+          IconButton(
+            tooltip: 'Trợ lý học tập',
+            icon: Icon(
+              Icons.forum_outlined,
+              color: colors.primaryStrong,
+            ),
+            onPressed: _moTroLyChat,
+          ),
           StudentNotificationBell(
             studentApi: widget.studentApi,
             onViewAll: widget.onViewAllNotifications,
@@ -149,6 +162,17 @@ class _StudentCourseManagementPageState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _SemesterOverviewCard(
+                semesters: _courseData.semesters,
+                selectedSemesterId: _selectedSemesterId,
+                isSaving: _isSavingSemester,
+                onAddSemester: _openSemesterModal,
+                onSelectSemester: _changeSemester,
+                onEditSemester: (semester) =>
+                    _openSemesterModal(semester: semester),
+                onDeleteSemester: _deleteSemester,
+              ),
+              const SizedBox(height: 18),
               _GpaDashboard(
                 courses: _allManagedCourses,
                 targetGpa: _targetGpa,
@@ -304,6 +328,7 @@ class _StudentCourseManagementPageState
                       course: course,
                       index: index,
                       onTap: () => _openCourseModal(course),
+                      onGradeTap: () => _openGradeModal(course),
                     );
                   },
                 ),
@@ -369,49 +394,107 @@ class _StudentCourseManagementPageState
   }
 
   Future<void> _reload({bool showLoader = true}) async {
+    await _reloadSemesterData(showLoader: showLoader);
+  }
+
+  Future<bool> _reloadSemesterData({
+    bool showLoader = true,
+    String? semesterId,
+  }) async {
+    final requestId = ++_reloadRequestId;
+
     if (showLoader) {
       setState(() => _isLoading = true);
     }
+
     try {
-      final selectedSemesterId = _courseData.selectedSemesterId;
-      final courses = await widget.studentApi.listCourses(
-        maHocKy: selectedSemesterId,
-      );
+      final selectedSemesterId = semesterId ?? _selectedSemesterId;
+      StudentCourseData courses;
+      try {
+        courses = await widget.studentApi.listCourses(
+          maHocKy: selectedSemesterId,
+        );
+      } on ApiException catch (error) {
+        if (error.statusCode != 404 || selectedSemesterId == null) {
+          rethrow;
+        }
+        courses = await widget.studentApi.listCourses();
+      }
       final grades = await _loadGrades(courses.selectedSemesterId);
 
       if (!mounted) {
-        return;
+        return false;
       }
+
+      if (requestId != _reloadRequestId) {
+        return true;
+      }
+
       setState(() {
         _courseData = courses;
-        _grades = grades;
+        _selectedSemesterId = courses.selectedSemesterId;
+        _grades =
+            grades ??
+            StudentGradeTranscriptData.empty(
+              'Không thể tải bảng điểm của học kỳ này lúc này.',
+            );
       });
+      if (grades == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Không thể tải bảng điểm lúc này, đang giữ dữ liệu hiện có.',
+            ),
+          ),
+        );
+      }
       _scheduleProjection();
+      return true;
     } on ApiException catch (error) {
       if (!mounted) {
-        return;
+        return false;
       }
+
+      if (requestId != _reloadRequestId) {
+        return true;
+      }
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
     } finally {
-      if (mounted && showLoader) {
+      if (mounted && showLoader && requestId == _reloadRequestId) {
         setState(() => _isLoading = false);
       }
     }
   }
 
-  Future<StudentGradeTranscriptData> _loadGrades(String? semesterId) async {
+  Future<StudentGradeTranscriptData?> _loadGrades(String? semesterId) async {
     try {
       return await widget.studentApi.getGradeTranscript(maHocKy: semesterId);
-    } on ApiException catch (error) {
-      return StudentGradeTranscriptData.empty(error.message);
+    } on ApiException {
+      return null;
+    }
+  }
+
+  Future<void> _changeSemester(String semesterId) async {
+    if (semesterId == _selectedSemesterId || _isLoading) {
+      return;
+    }
+
+    final previousSemesterId = _selectedSemesterId;
+    setState(() => _selectedSemesterId = semesterId);
+    final didReload = await _reloadSemesterData(semesterId: semesterId);
+
+    if (!didReload && mounted && _selectedSemesterId == semesterId) {
+      setState(() => _selectedSemesterId = previousSemesterId);
     }
   }
 
   void _scheduleProjection() {
     _projectionDebounce?.cancel();
-    final semesterId = _courseData.selectedSemesterId;
+    final semesterId = _selectedSemesterId;
     if (semesterId == null || _allManagedCourses.isEmpty) {
       setState(() {
         _projectionAdvice = null;
@@ -452,6 +535,13 @@ class _StudentCourseManagementPageState
     }
   }
 
+  Future<void> _moTroLyChat() async {
+    await StudentAssistantChatSheet.show(
+      context,
+      studentApi: widget.studentApi,
+    );
+  }
+
   String _projectionText(StudentGpaProjectionData projection) {
     if (projection.suggestions.isEmpty) {
       return projection.message;
@@ -487,8 +577,281 @@ class _StudentCourseManagementPageState
     }
   }
 
+  Future<void> _openGradeModal(_ManagedCourse course) async {
+    if (course.components.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Môn học này chưa có cấu hình trọng số, hãy cấu hình trước rồi mới nhập điểm.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (course.needsGradeConfigWarning) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            course.isAutoCreatedFromScheduleImport
+                ? 'Môn này được tạo tự động từ thời khóa biểu và đang dùng cấu hình điểm mặc định. Hãy rà soát lại trước khi nhập điểm.'
+                : 'Môn này vẫn cần rà soát lại cấu hình điểm trước khi nhập điểm.',
+          ),
+        ),
+      );
+    }
+
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          _GradeEntryModal(course: course, studentApi: widget.studentApi),
+    );
+
+    if (saved == true && mounted) {
+      await _reload(showLoader: false);
+      await widget.onChanged?.call();
+    }
+  }
+
+  Future<void> _openSemesterModal({StudentSemester? semester}) async {
+    if (_isSavingSemester) {
+      return;
+    }
+
+    final isEditing = semester != null;
+    final formKey = GlobalKey<FormState>();
+    final nameController = TextEditingController(text: semester?.name ?? '');
+    final startYearController = TextEditingController(
+      text: _yearFromSemesterValue(semester?.startDate),
+    );
+    final endYearController = TextEditingController(
+      text: _yearFromSemesterValue(semester?.endDate),
+    );
+
+    try {
+      final draft = await showDialog<_SemesterDraft>(
+        context: context,
+        builder: (context) {
+          final colors = StudentThemeScope.colorsOf(context);
+          return AlertDialog(
+            backgroundColor: colors.surface,
+            title: Text(
+              isEditing ? 'Sửa học kỳ' : 'Thêm học kỳ',
+              style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
+            ),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      style: TextStyle(color: colors.text),
+                      decoration: _semesterInputDecoration(
+                        'Tên học kỳ',
+                        colors,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập tên học kỳ';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: startYearController,
+                      style: TextStyle(color: colors.text),
+                      decoration: _semesterInputDecoration(
+                        'Năm bắt đầu',
+                        colors,
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        final year = int.tryParse((value ?? '').trim());
+                        if (year == null || year < 1900 || year > 2100) {
+                          return 'Vui lòng nhập năm bắt đầu hợp lệ';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: endYearController,
+                      style: TextStyle(color: colors.text),
+                      decoration: _semesterInputDecoration(
+                        'Năm kết thúc',
+                        colors,
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        final year = int.tryParse((value ?? '').trim());
+                        if (year == null || year < 1900 || year > 2100) {
+                          return 'Vui lòng nhập năm kết thúc hợp lệ';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) {
+                    return;
+                  }
+                  Navigator.pop(
+                    context,
+                    _SemesterDraft(
+                      name: nameController.text.trim(),
+                      startYear: startYearController.text.trim(),
+                      endYear: endYearController.text.trim(),
+                    ),
+                  );
+                },
+                child: Text(isEditing ? 'Lưu thay đổi' : 'Lưu học kỳ'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted || draft == null) {
+        return;
+      }
+
+      setState(() => _isSavingSemester = true);
+      try {
+        final startDate = draft.startYear.isEmpty
+            ? null
+            : '${draft.startYear.trim()}-01-01';
+        final endDate = draft.endYear.isEmpty
+            ? null
+            : '${draft.endYear.trim()}-12-31';
+        if (isEditing) {
+          await widget.studentApi.updateSemester(
+            semesterId: semester.id,
+            name: draft.name,
+            startDate: startDate,
+            endDate: endDate,
+          );
+          await _afterMutation('Cập nhật học kỳ thành công.');
+        } else {
+          final createdSemester = await widget.studentApi.createSemester(
+            name: draft.name,
+            startDate: startDate,
+            endDate: endDate,
+          );
+          _selectedSemesterId = createdSemester.id;
+          await _afterMutation('Tạo học kỳ thành công.');
+        }
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      } finally {
+        if (mounted) {
+          setState(() => _isSavingSemester = false);
+        }
+      }
+    } finally {
+      nameController.dispose();
+      startYearController.dispose();
+      endYearController.dispose();
+    }
+  }
+
+  Future<void> _deleteSemester(
+    StudentSemester semester, {
+    bool force = false,
+  }) async {
+    if (!force) {
+      final confirmed = await _confirmDeleteSemester(
+        'Bạn có chắc muốn xóa học kỳ "${semester.name}"?',
+      );
+      if (confirmed != true) {
+        return;
+      }
+    }
+
+    setState(() => _isSavingSemester = true);
+    try {
+      await widget.studentApi.deleteSemester(semester.id, force: force);
+      if (mounted && semester.id == _selectedSemesterId) {
+        setState(() => _selectedSemesterId = null);
+      }
+      await _afterMutation('Xóa học kỳ thành công.');
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final details = error.details;
+      final canForceDelete =
+          details is Map<String, dynamic> &&
+          details['canForceDelete'] == true &&
+          !force;
+
+      if (canForceDelete) {
+        final confirmed = await _confirmForceDelete(
+          details['messageForUser'] as String? ?? error.message,
+        );
+        if (confirmed == true && mounted) {
+          await _deleteSemester(semester, force: true);
+        }
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingSemester = false);
+      }
+    }
+  }
+
+  Future<bool?> _confirmDeleteSemester(String message) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.surface,
+        title: Text(
+          'Xóa học kỳ?',
+          style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
+        ),
+        content: Text(message, style: TextStyle(color: colors.textMuted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Xóa',
+              style: TextStyle(color: Color(0xFFFFB4AB)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveCourse(_ManagedCourse? course, _CourseDraft draft) async {
-    final semesterId = course?.semesterId ?? _courseData.selectedSemesterId;
+    final semesterId = course?.semesterId ?? _selectedSemesterId;
     if (semesterId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -520,18 +883,15 @@ class _StudentCourseManagementPageState
         components: [
           StudentGradeWeightInput(
             name: course?.attendanceComponentName ?? 'Chuyên cần',
-            weight: 10,
-            score: draft.attendance,
+            weight: draft.attendanceWeight,
           ),
           StudentGradeWeightInput(
             name: course?.midtermComponentName ?? 'Giữa kỳ',
-            weight: 30,
-            score: draft.midterm,
+            weight: draft.midtermWeight,
           ),
           StudentGradeWeightInput(
             name: course?.finalComponentName ?? 'Cuối kỳ',
-            weight: 60,
-            score: draft.finalGrade,
+            weight: draft.finalWeight,
           ),
         ],
       );
@@ -1007,11 +1367,13 @@ class _CourseCard extends StatelessWidget {
     required this.course,
     required this.index,
     required this.onTap,
+    required this.onGradeTap,
   });
 
   final _ManagedCourse course;
   final int index;
   final VoidCallback onTap;
+  final VoidCallback onGradeTap;
 
   Color get _gradeColor {
     final avg = course.averageGrade;
@@ -1105,6 +1467,13 @@ class _CourseCard extends StatelessWidget {
                       color: colors.text,
                     ),
                   ),
+                  if (course.needsGradeConfigWarning) ...[
+                    const SizedBox(height: 8),
+                    _CourseWarningChip(
+                      isAutoCreatedFromScheduleImport:
+                          course.isAutoCreatedFromScheduleImport,
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -1162,10 +1531,66 @@ class _CourseCard extends StatelessWidget {
                     color: colors.textMuted,
                   ),
                 ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: onGradeTap,
+                  icon: Icon(
+                    Icons.edit_note,
+                    size: 16,
+                    color: colors.primaryStrong,
+                  ),
+                  label: Text(
+                    'Nhập điểm',
+                    style: TextStyle(
+                      color: colors.primaryStrong,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CourseWarningChip extends StatelessWidget {
+  const _CourseWarningChip({required this.isAutoCreatedFromScheduleImport});
+
+  final bool isAutoCreatedFromScheduleImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.tint(colors.danger, lightAlpha: 0.12, darkAlpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.danger.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 14, color: colors.danger),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              isAutoCreatedFromScheduleImport
+                  ? 'Môn tạo từ TKB, hãy rà soát trọng số điểm'
+                  : 'Môn này cần rà soát cấu hình điểm',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: colors.danger,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1231,9 +1656,9 @@ class _CourseModalState extends State<_CourseModal> {
   late String _name;
   late String _code;
   late int _credits;
-  late double _attendance;
-  late double _midterm;
-  late double _finalGrade;
+  late double _attendanceWeight;
+  late double _midtermWeight;
+  late double _finalWeight;
 
   @override
   void initState() {
@@ -1241,16 +1666,15 @@ class _CourseModalState extends State<_CourseModal> {
     _name = widget.course?.name ?? '';
     _code = widget.course?.code ?? '';
     _credits = widget.course?.credits ?? 3;
-    _attendance = widget.course?.attendance ?? 10;
-    _midterm = widget.course?.midterm ?? 8;
-    _finalGrade = widget.course?.finalGrade ?? 8;
+    _attendanceWeight = widget.course?.attendanceWeight ?? 10;
+    _midtermWeight = widget.course?.midtermWeight ?? 30;
+    _finalWeight = widget.course?.finalWeight ?? 60;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
-    final computedAverage =
-        (_attendance * 0.1) + (_midterm * 0.3) + (_finalGrade * 0.6);
+    final totalWeight = _attendanceWeight + _midtermWeight + _finalWeight;
 
     return Container(
       padding: EdgeInsets.only(
@@ -1289,7 +1713,7 @@ class _CourseModalState extends State<_CourseModal> {
                 children: [
                   Text(
                     widget.course != null
-                        ? 'Cập nhật học phần'
+                        ? 'Cập nhật trọng số học phần'
                         : 'Thêm môn học mới',
                     style: TextStyle(
                       fontSize: 18,
@@ -1318,7 +1742,7 @@ class _CourseModalState extends State<_CourseModal> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Điểm tổng kết ước tính',
+                          'Tổng trọng số',
                           style: TextStyle(
                             fontSize: 10,
                             color: colors.textMuted,
@@ -1327,7 +1751,7 @@ class _CourseModalState extends State<_CourseModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          computedAverage.toStringAsFixed(1),
+                          '${totalWeight.toStringAsFixed(1)}%',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
@@ -1340,7 +1764,7 @@ class _CourseModalState extends State<_CourseModal> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'Cơ cấu trọng số',
+                          'Cơ cấu trọng số hiện tại',
                           style: TextStyle(
                             fontSize: 10,
                             color: colors.textMuted,
@@ -1349,7 +1773,7 @@ class _CourseModalState extends State<_CourseModal> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '10% - 30% - 60%',
+                          '${_attendanceWeight.toStringAsFixed(0)}% - ${_midtermWeight.toStringAsFixed(0)}% - ${_finalWeight.toStringAsFixed(0)}%',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -1408,7 +1832,7 @@ class _CourseModalState extends State<_CourseModal> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Điểm số thành phần',
+                'Trọng số thành phần',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -1416,17 +1840,22 @@ class _CourseModalState extends State<_CourseModal> {
                 ),
               ),
               const SizedBox(height: 12),
-              _buildSliderRow('Chuyên cần (10%)', _attendance, (value) {
-                setState(() => _attendance = value);
+              _buildSliderRow('Chuyên cần (%)', _attendanceWeight, (value) {
+                setState(() => _attendanceWeight = value);
               }),
               const SizedBox(height: 12),
-              _buildSliderRow('Giữa kỳ (30%)', _midterm, (value) {
-                setState(() => _midterm = value);
+              _buildSliderRow('Giữa kỳ (%)', _midtermWeight, (value) {
+                setState(() => _midtermWeight = value);
               }),
               const SizedBox(height: 12),
-              _buildSliderRow('Cuối kỳ (60%)', _finalGrade, (value) {
-                setState(() => _finalGrade = value);
+              _buildSliderRow('Cuối kỳ (%)', _finalWeight, (value) {
+                setState(() => _finalWeight = value);
               }),
+              const SizedBox(height: 8),
+              Text(
+                'Tổng hiện tại: ${totalWeight.toStringAsFixed(1)}%',
+                style: TextStyle(color: colors.textMuted, fontSize: 11),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -1536,7 +1965,7 @@ class _CourseModalState extends State<_CourseModal> {
           child: Slider(
             value: value,
             min: 0,
-            max: 10,
+            max: 100,
             divisions: 100,
             onChanged: onChanged,
           ),
@@ -1549,6 +1978,13 @@ class _CourseModalState extends State<_CourseModal> {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
+    final totalWeight = _attendanceWeight + _midtermWeight + _finalWeight;
+    if ((totalWeight - 100).abs() > 0.01) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tổng trọng số phải bằng 100%')),
+      );
+      return;
+    }
     _formKey.currentState!.save();
     Navigator.pop(
       context,
@@ -1557,9 +1993,9 @@ class _CourseModalState extends State<_CourseModal> {
           code: _code,
           name: _name,
           credits: _credits,
-          attendance: _attendance,
-          midterm: _midterm,
-          finalGrade: _finalGrade,
+          attendanceWeight: _attendanceWeight,
+          midtermWeight: _midtermWeight,
+          finalWeight: _finalWeight,
         ),
       ),
     );
@@ -1598,9 +2034,15 @@ class _ManagedCourse {
     required this.name,
     required this.credits,
     required this.semesterName,
+    required this.isAutoCreatedFromScheduleImport,
+    required this.needsGradeConfigWarning,
+    required this.components,
     required this.attendance,
     required this.midterm,
     required this.finalGrade,
+    required this.attendanceWeight,
+    required this.midtermWeight,
+    required this.finalWeight,
     required this.attendanceComponentName,
     required this.midtermComponentName,
     required this.finalComponentName,
@@ -1614,18 +2056,36 @@ class _ManagedCourse {
   final String name;
   final int credits;
   final String semesterName;
+  final bool isAutoCreatedFromScheduleImport;
+  final bool needsGradeConfigWarning;
+  final List<StudentGradeComponent> components;
   final double attendance;
   final double midterm;
   final double finalGrade;
+  final double attendanceWeight;
+  final double midtermWeight;
+  final double finalWeight;
   final String attendanceComponentName;
   final String midtermComponentName;
   final String finalComponentName;
   final double? backendAverage10;
   final double? backendGpa4;
 
-  double get averageGrade =>
-      backendAverage10 ??
-      (attendance * 0.1) + (midterm * 0.3) + (finalGrade * 0.6);
+  double get averageGrade {
+    if (backendAverage10 != null) {
+      return backendAverage10!;
+    }
+
+    final totalWeight = attendanceWeight + midtermWeight + finalWeight;
+    if (totalWeight <= 0) {
+      return 0;
+    }
+
+    return ((attendance * attendanceWeight) +
+            (midterm * midtermWeight) +
+            (finalGrade * finalWeight)) /
+        totalWeight;
+  }
 
   double get gpa4 => backendGpa4 ?? _convert10To4(averageGrade);
 
@@ -1645,9 +2105,15 @@ class _ManagedCourse {
       name: course.name,
       credits: course.credits,
       semesterName: course.semesterName,
+      isAutoCreatedFromScheduleImport: course.isAutoCreatedFromScheduleImport,
+      needsGradeConfigWarning: course.needsGradeConfigWarning,
+      components: components,
       attendance: attendance?.score ?? 0,
       midterm: midterm?.score ?? 0,
       finalGrade: finalScore?.score ?? 0,
+      attendanceWeight: attendance?.weight ?? 10,
+      midtermWeight: midterm?.weight ?? 30,
+      finalWeight: finalScore?.weight ?? 60,
       attendanceComponentName: attendance?.name ?? 'Chuyên cần',
       midtermComponentName: midterm?.name ?? 'Giữa kỳ',
       finalComponentName: finalScore?.name ?? 'Cuối kỳ',
@@ -1662,17 +2128,17 @@ class _CourseDraft {
     required this.code,
     required this.name,
     required this.credits,
-    required this.attendance,
-    required this.midterm,
-    required this.finalGrade,
+    required this.attendanceWeight,
+    required this.midtermWeight,
+    required this.finalWeight,
   });
 
   final String code;
   final String name;
   final int credits;
-  final double attendance;
-  final double midterm;
-  final double finalGrade;
+  final double attendanceWeight;
+  final double midtermWeight;
+  final double finalWeight;
 }
 
 class _CourseModalResult {
@@ -1688,6 +2154,525 @@ class _CourseModalResult {
   factory _CourseModalResult.delete(String courseId) {
     return _CourseModalResult._(deleteCourseId: courseId);
   }
+}
+
+class _GradeEntryModal extends StatefulWidget {
+  const _GradeEntryModal({required this.course, required this.studentApi});
+
+  final _ManagedCourse course;
+  final StudentApiService studentApi;
+
+  @override
+  State<_GradeEntryModal> createState() => _GradeEntryModalState();
+}
+
+class _GradeEntryModalState extends State<_GradeEntryModal> {
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, TextEditingController> _controllers = {};
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final component in _sortedComponents(widget.course.components)) {
+      _controllers[component.id] = TextEditingController(
+        text: component.score?.toStringAsFixed(1) ?? '',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    final components = _sortedComponents(widget.course.components);
+
+    return Container(
+      padding: EdgeInsets.only(
+        top: 20,
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 50,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.borderStrong,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Nhập điểm thành phần',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: colors.primaryStrong,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: colors.textMuted),
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Chỉ nhập điểm, trọng số đã được cấu hình riêng.',
+                style: TextStyle(color: colors.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              ...components.map((component) {
+                final controller = _controllers[component.id]!;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              component.name,
+                              style: TextStyle(
+                                color: colors.text,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Trọng số: ${component.weight.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                color: colors.textMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller,
+                          enabled: !_isSaving,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          style: TextStyle(color: colors.text),
+                          decoration: _gradeInputDecoration('Điểm', colors),
+                          validator: (value) {
+                            final parsed = double.tryParse(
+                              (value ?? '').trim(),
+                            );
+                            if (parsed == null || parsed < 0 || parsed > 10) {
+                              return '0-10';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _isSaving ? 'Đang lưu...' : 'Lưu điểm',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primaryStrong,
+                    foregroundColor: colors.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<StudentGradeComponent> _sortedComponents(
+    List<StudentGradeComponent> components,
+  ) {
+    final priority = <String, int>{'Chuyên cần': 0, 'Giữa kỳ': 1, 'Cuối kỳ': 2};
+
+    final sorted = [...components];
+    sorted.sort((left, right) {
+      final leftPriority = priority[left.name.trim()] ?? 99;
+      final rightPriority = priority[right.name.trim()] ?? 99;
+
+      if (leftPriority != rightPriority) {
+        return leftPriority.compareTo(rightPriority);
+      }
+
+      return left.name.compareTo(right.name);
+    });
+
+    return sorted;
+  }
+
+  Future<void> _save() async {
+    if (_formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      for (final component in widget.course.components) {
+        final value = double.parse(_controllers[component.id]!.text.trim());
+        if (component.id.isNotEmpty) {
+          await widget.studentApi.updateGradeComponent(
+            componentId: component.id,
+            score: value,
+          );
+        } else {
+          await widget.studentApi.createGradeComponent(
+            courseId: widget.course.id,
+            name: component.name,
+            weight: component.weight,
+            score: value,
+          );
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
+      Navigator.pop(context, true);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  InputDecoration _gradeInputDecoration(
+    String label,
+    StudentThemeColors colors,
+  ) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: colors.textMuted),
+      filled: true,
+      fillColor: colors.surfaceAlt.withValues(alpha: 0.75),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: colors.primaryStrong, width: 1.2),
+      ),
+      errorStyle: TextStyle(color: colors.danger, fontSize: 11),
+    );
+  }
+}
+
+InputDecoration _semesterInputDecoration(
+  String label,
+  StudentThemeColors colors,
+) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: colors.textMuted),
+    filled: true,
+    fillColor: colors.surfaceAlt.withValues(alpha: 0.75),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: colors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: colors.border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: colors.primaryStrong, width: 1.2),
+    ),
+    errorStyle: TextStyle(color: colors.danger, fontSize: 11),
+  );
+}
+
+class _SemesterDraft {
+  const _SemesterDraft({
+    required this.name,
+    required this.startYear,
+    required this.endYear,
+  });
+
+  final String name;
+  final String startYear;
+  final String endYear;
+}
+
+class _SemesterOverviewCard extends StatelessWidget {
+  const _SemesterOverviewCard({
+    required this.semesters,
+    required this.selectedSemesterId,
+    required this.isSaving,
+    required this.onAddSemester,
+    required this.onSelectSemester,
+    required this.onEditSemester,
+    required this.onDeleteSemester,
+  });
+
+  final List<StudentSemester> semesters;
+  final String? selectedSemesterId;
+  final bool isSaving;
+  final VoidCallback onAddSemester;
+  final ValueChanged<String> onSelectSemester;
+  final ValueChanged<StudentSemester> onEditSemester;
+  final ValueChanged<StudentSemester> onDeleteSemester;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    final selectedSemester = semesters.isEmpty
+        ? null
+        : semesters.firstWhere(
+            (item) => item.id == selectedSemesterId,
+            orElse: () => semesters.first,
+          );
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Học kỳ',
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      semesters.isEmpty
+                          ? 'Chưa có học kỳ nào. Thêm học kỳ trước để bắt đầu thêm môn học.'
+                          : selectedSemester == null
+                          ? 'Đã có ${semesters.length} học kỳ.'
+                          : 'Đang dùng: ${selectedSemester.name}',
+                      style: TextStyle(
+                        color: colors.textMuted,
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: isSaving ? null : onAddSemester,
+                icon: isSaving
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Thêm học kỳ'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primaryStrong,
+                  foregroundColor: colors.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (semesters.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: semesters.map((semester) {
+                final isSelected = semester.id == selectedSemesterId;
+                return InkWell(
+                  onTap: () => onSelectSemester(semester.id),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? colors.primaryStrong.withValues(alpha: 0.12)
+                          : colors.surfaceAlt.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected
+                            ? colors.primaryStrong
+                            : colors.border,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              semester.name,
+                              style: TextStyle(
+                                color: colors.text,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              onTap: isSaving
+                                  ? null
+                                  : () => onEditSemester(semester),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.edit_outlined,
+                                  size: 15,
+                                  color: colors.textMuted,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            InkWell(
+                              onTap: isSaving
+                                  ? null
+                                  : () => onDeleteSemester(semester),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  size: 15,
+                                  color: colors.danger,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          _semesterDateRange(semester),
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _semesterDateRange(StudentSemester semester) {
+  final start = semester.startDate?.trim();
+  final end = semester.endDate?.trim();
+  if ((start == null || start.isEmpty) && (end == null || end.isEmpty)) {
+    return 'Chưa có ngày';
+  }
+  if (start == null || start.isEmpty) {
+    return 'Đến ${_yearFromSemesterValue(end)}';
+  }
+  if (end == null || end.isEmpty) {
+    return 'Từ ${_yearFromSemesterValue(start)}';
+  }
+  return '${_yearFromSemesterValue(start)} - ${_yearFromSemesterValue(end)}';
+}
+
+String _yearFromSemesterValue(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.length >= 4) {
+    return trimmed.substring(0, 4);
+  }
+  return trimmed;
 }
 
 StudentGradeComponent? _findComponent(
