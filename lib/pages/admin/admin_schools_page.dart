@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/admin_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/admin_api_service.dart';
+import 'admin_academic_rules_page.dart';
 import 'widgets/admin_common.dart';
 
 class AdminSchoolsPage extends StatefulWidget {
@@ -76,6 +77,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
                       busy: _busyCode == school.code,
                       onEdit: () => _openSchoolDialog(school: school),
                       onDelete: () => _confirmDelete(school),
+                      onConfigureRules: () => _openAcademicRules(school),
                     ),
                   ),
                 ),
@@ -135,6 +137,18 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
         setState(() => _busyCode = null);
       }
     }
+  }
+
+  void _openAcademicRules(AdminSchool school) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => AdminAcademicRulesPage(
+          api: widget.api,
+          schoolCode: school.code,
+          schoolName: school.name,
+        ),
+      ),
+    );
   }
 
   Future<void> _confirmDelete(AdminSchool school) async {
@@ -294,12 +308,14 @@ class _SchoolCard extends StatelessWidget {
     required this.busy,
     required this.onEdit,
     required this.onDelete,
+    required this.onConfigureRules,
   });
 
   final AdminSchool school;
   final bool busy;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onConfigureRules;
 
   @override
   Widget build(BuildContext context) {
@@ -358,6 +374,8 @@ class _SchoolCard extends StatelessWidget {
                     switch (action) {
                       case _SchoolAction.edit:
                         onEdit();
+                      case _SchoolAction.configureRules:
+                        onConfigureRules();
                       case _SchoolAction.delete:
                         onDelete();
                     }
@@ -366,6 +384,10 @@ class _SchoolCard extends StatelessWidget {
                     PopupMenuItem(
                       value: _SchoolAction.edit,
                       child: Text('Chỉnh sửa'),
+                    ),
+                    PopupMenuItem(
+                      value: _SchoolAction.configureRules,
+                      child: Text('Cấu hình học thuật'),
                     ),
                     PopupMenuItem(
                       value: _SchoolAction.delete,
@@ -487,7 +509,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
   }
 }
 
-enum _SchoolAction { edit, delete }
+enum _SchoolAction { edit, configureRules, delete }
 
 class _SchoolInput {
   const _SchoolInput({required this.code, required this.name});
