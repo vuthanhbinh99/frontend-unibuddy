@@ -15,6 +15,7 @@ class LoginPage extends StatefulWidget {
     required this.onLoginSuccess,
     required this.onRegisterTap,
     required this.onForgotPasswordTap,
+    this.fcmTokenProvider,
   });
 
   final AuthApiService authApi;
@@ -22,6 +23,10 @@ class LoginPage extends StatefulWidget {
   final ValueChanged<AuthSession> onLoginSuccess;
   final VoidCallback onRegisterTap;
   final VoidCallback onForgotPasswordTap;
+
+  /// Cung cấp FCM token hiện tại của thiết bị (nếu có) để gửi kèm khi đăng nhập,
+  /// giúp backend lưu token vào phiên và đẩy push notification về máy.
+  final String? Function()? fcmTokenProvider;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -156,6 +161,7 @@ class _LoginPageState extends State<LoginPage> {
       final result = await widget.authApi.login(
         email: _emailController.text,
         password: _passwordController.text,
+        fcmToken: widget.fcmTokenProvider?.call(),
         deviceType: 'flutter',
       );
 
@@ -189,6 +195,7 @@ class _LoginPageState extends State<LoginPage> {
 
       final result = await widget.authApi.loginWithGoogle(
         idToken: idToken,
+        fcmToken: widget.fcmTokenProvider?.call(),
         deviceType: 'flutter',
       );
 
@@ -236,6 +243,7 @@ class _LoginPageState extends State<LoginPage> {
           email: _emailController.text,
           password: _passwordController.text,
           newPassword: newPassword,
+          fcmToken: widget.fcmTokenProvider?.call(),
           deviceType: 'flutter',
         );
 
