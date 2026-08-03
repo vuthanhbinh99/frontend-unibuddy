@@ -63,6 +63,7 @@ class PublicUser {
     required this.role,
     this.phoneNumber,
     this.avatarUrl,
+    this.studentProfile,
     this.createdAt,
     this.updatedAt,
   });
@@ -74,6 +75,7 @@ class PublicUser {
   final String? avatarUrl;
   final String status;
   final UserRole role;
+  final StudentProfile? studentProfile;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -86,6 +88,11 @@ class PublicUser {
       avatarUrl: json['avatarUrl'] as String?,
       status: json['status'] as String,
       role: UserRole.fromJson(json['role'] as Map<String, dynamic>),
+      studentProfile: json['studentProfile'] is Map<String, dynamic>
+          ? StudentProfile.fromJson(
+              json['studentProfile'] as Map<String, dynamic>,
+            )
+          : null,
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
@@ -249,6 +256,20 @@ class RegisterStudentResult {
       studentProfile: StudentProfile.fromJson(
         json['studentProfile'] as Map<String, dynamic>,
       ),
+    );
+  }
+}
+
+class PublicSchool {
+  const PublicSchool({required this.code, required this.name});
+
+  final String code;
+  final String name;
+
+  factory PublicSchool.fromJson(Map<String, dynamic> json) {
+    return PublicSchool(
+      code: json['maTruongCode'] as String,
+      name: json['tenTruong'] as String,
     );
   }
 }
