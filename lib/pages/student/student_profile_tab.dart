@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../models/auth_models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api/api_exception.dart';
+import '../../services/platform/content_resolver.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
 import 'widgets/student_notification_dropdown.dart';
@@ -36,6 +37,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
   final _formKey = GlobalKey<FormState>();
   late String _fullName;
   late String _email;
+  late String _studentId;
   late String _phone;
   bool _uploadingAvatar = false;
   bool _savingProfile = false;
@@ -66,6 +68,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
   void _syncFromUser() {
     _fullName = widget.user.fullName;
     _email = widget.user.email;
+    _studentId = _visibleStudentId(widget.user.studentProfile?.maSinhVien);
     _phone = widget.user.phoneNumber ?? '';
   }
 
@@ -256,6 +259,17 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
                   ),
                   const SizedBox(height: 18),
                   _buildInputField(
+                    label: l10n.tOr(
+                      'student.profile.studentId',
+                      fallbackVi: 'Mã sinh viên',
+                      fallbackEn: 'Student ID',
+                    ),
+                    initialValue: _studentId,
+                    icon: Icons.badge_outlined,
+                    onChanged: (value) => setState(() => _studentId = value),
+                  ),
+                  const SizedBox(height: 18),
+                  _buildInputField(
                     label: l10n.t('student.profile.phone'),
                     initialValue: _phone,
                     icon: Icons.phone_outlined,
@@ -436,7 +450,8 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: _avatarMimeByExtension.keys.toList(),
-      withData: false,
+      // Request bytes directly to avoid platform path/content URI read issues.
+      withData: true,
     );
 
     if (!mounted || picked == null || picked.files.isEmpty) {
@@ -444,6 +459,9 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     }
 
     final file = picked.files.single;
+    debugPrint(
+      'Avatar picker: name=${file.name} path=${file.path} bytes=${file.bytes != null} size=${file.size}',
+    );
     final extension = (file.extension ?? '').toLowerCase();
     final mimeType = _avatarMimeByExtension[extension];
 
@@ -474,9 +492,21 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
       if (mounted) {
         _showSnack(error.message);
       }
-    } catch (_) {
+    } catch (e, st) {
+      // Log full error for diagnosis and show a friendlier/accurate message when possible.
+      debugPrint('Avatar upload/read error: $e\n$st');
+      String? specific;
+      try {
+        specific = (e as FileSystemException).message;
+      } catch (_) {
+        specific = null;
+      }
       if (mounted) {
-        _showSnack(l10n.t('student.profile.avatar.readFailed'));
+        _showSnack(
+          (specific != null && specific.isNotEmpty)
+              ? specific
+              : l10n.t('student.profile.avatar.readFailed'),
+        );
       }
     } finally {
       if (mounted) {
@@ -498,7 +528,29 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
       );
     }
 
+    // If path is a content URI on Android (content://...), try platform helper
+    try {
+      if (path.startsWith('content://')) {
+        // Lazy import to avoid importing platform helper in non-mobile contexts
+        final resolver = await _readContentUriBytes(path);
+        if (resolver != null) return resolver;
+      }
+    } catch (e) {
+      debugPrint('ContentResolver read failed: $e');
+    }
+
     return File(path).readAsBytes();
+  }
+
+  Future<List<int>?> _readContentUriBytes(String uri) async {
+    try {
+      // Import local helper
+      final cr = await ContentResolver.readContentUri(uri);
+      return cr;
+    } catch (e) {
+      debugPrint('readContentUri exception: $e');
+      return null;
+    }
   }
 
   void _showSnack(String message) {
@@ -510,10 +562,22 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
   Future<void> _saveProfile() async {
     final l10n = context.l10n;
     final nextFullName = _fullName.trim();
+    final nextStudentId = _studentId.trim();
     final nextPhone = _phone.trim();
 
     if (nextFullName.isEmpty) {
       _showSnack(l10n.t('student.profile.fullNameRequired'));
+      return;
+    }
+
+    if (nextStudentId.isEmpty) {
+      _showSnack(
+        l10n.tOr(
+          'student.profile.studentIdRequired',
+          fallbackVi: 'Vui lòng nhập mã sinh viên',
+          fallbackEn: 'Please enter your student ID',
+        ),
+      );
       return;
     }
 
@@ -523,6 +587,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
       final updatedUser = await widget.studentApi.updateCurrentUserProfile(
         fullName: nextFullName,
         phoneNumber: nextPhone.isEmpty ? null : nextPhone,
+        maSinhVien: nextStudentId,
       );
 
       if (!mounted) {
@@ -531,6 +596,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
 
       setState(() {
         _fullName = updatedUser.fullName;
+        _studentId = updatedUser.studentProfile?.maSinhVien ?? nextStudentId;
         _phone = updatedUser.phoneNumber ?? '';
         _email = updatedUser.email;
       });
@@ -569,4 +635,9 @@ String _labelWithFallback(
 String _avatarInitial(String name) {
   final trimmed = name.trim();
   return trimmed.isEmpty ? 'U' : trimmed.characters.first.toUpperCase();
+}
+
+String _visibleStudentId(String? value) {
+  final normalized = value?.trim() ?? '';
+  return RegExp(r'^GG[0-9A-F]{24}$').hasMatch(normalized) ? '' : normalized;
 }
