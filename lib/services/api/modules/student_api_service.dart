@@ -1,6 +1,8 @@
 import '../../../models/auth_models.dart';
+import '../../../models/student_assistant_models.dart';
 import '../../../models/student_course_models.dart';
 import '../../../models/student_deadline_models.dart';
+import '../../../models/student_exam_models.dart';
 import '../../../models/student_flashcard_models.dart';
 import '../../../models/student_grade_models.dart';
 import '../../../models/student_home_models.dart';
@@ -29,10 +31,12 @@ class StudentApiService {
   Future<PublicUser> updateCurrentUserProfile({
     required String fullName,
     String? phoneNumber,
+    String? maSinhVien,
   }) async {
     final payload = <String, Object?>{
       'fullName': fullName,
       'phoneNumber': phoneNumber,
+      'maSinhVien': maSinhVien,
     };
     final data = await _apiClient.patch('/users/me', body: payload);
     final map = data as Map<String, dynamic>;
@@ -184,7 +188,162 @@ class StudentApiService {
         'ngayKetThuc': endDate,
       },
     );
-    return StudentScheduleItem.fromJson(data as Map<String, dynamic>);
+    return _scheduleFromMutation(data);
+  }
+
+  Future<StudentScheduleItem> updateSchedule({
+    required String scheduleId,
+    required String courseId,
+    required int dayOfWeek,
+    required int startPeriod,
+    required int periodCount,
+    String? room,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final normalizedRoom = room?.trim();
+    final data = await _apiClient.put(
+      '/schedules/${Uri.encodeComponent(scheduleId)}',
+      body: {
+        'maMonHoc': courseId,
+        'thu': dayOfWeek,
+        'tietBatDau': startPeriod,
+        'soTiet': periodCount,
+        'phongHoc': normalizedRoom == null || normalizedRoom.isEmpty
+            ? null
+            : normalizedRoom,
+        'ngayBatDau': startDate,
+        'ngayKetThuc': endDate,
+      },
+    );
+    return _scheduleFromMutation(data);
+  }
+
+  Future<void> deleteSchedule({required String scheduleId}) async {
+    await _apiClient.delete('/schedules/${Uri.encodeComponent(scheduleId)}');
+  }
+
+  StudentScheduleItem _scheduleFromMutation(Object? data) {
+    final map = data as Map<String, dynamic>;
+    final rawSchedule = map['lichHoc'] ?? data;
+    return StudentScheduleItem.fromJson(rawSchedule as Map<String, dynamic>);
+  }
+
+  Future<StudentExamData> listExams({String? maMonHoc}) async {
+    final data = await _apiClient.get(
+      '/exams',
+      query: maMonHoc == null ? null : {'maMonHoc': maMonHoc},
+    );
+    return StudentExamData.fromJson(data);
+  }
+
+  Future<StudentExamItem> createExam({
+    required String courseId,
+    required DateTime examTime,
+    String? room,
+    String? examLocation,
+    bool replaceExistingExam = false,
+  }) async {
+    final data = await _apiClient.post(
+      '/exams',
+      body: _withoutNulls({
+        'maMonHoc': courseId,
+        'thoiGianThi': examTime.toIso8601String(),
+        'phongThi': room?.trim(),
+        'diaDiemThi': examLocation?.trim(),
+        'replaceExistingExam': replaceExistingExam,
+      }),
+    );
+    return _examFromMutation(data);
+  }
+
+  Future<StudentExamItem> updateExam({
+    required String examId,
+    required String courseId,
+    required DateTime examTime,
+    String? room,
+    String? examLocation,
+  }) async {
+    final data = await _apiClient.put(
+      '/exams/${Uri.encodeComponent(examId)}',
+      body: _withoutNulls({
+        'maMonHoc': courseId,
+        'thoiGianThi': examTime.toIso8601String(),
+        'phongThi': room?.trim(),
+        'diaDiemThi': examLocation?.trim(),
+      }),
+    );
+    return _examFromMutation(data);
+  }
+
+  Future<void> deleteExam({required String examId}) async {
+    await _apiClient.delete('/exams/${Uri.encodeComponent(examId)}');
+  }
+
+  StudentExamItem _examFromMutation(Object? data) {
+    final map = data as Map<String, dynamic>;
+    final rawExam = map['lichThi'] ?? data;
+    return StudentExamItem.fromJson(rawExam as Map<String, dynamic>);
+  }
+
+  Future<StudentExamImportHeadersData> extractExamImportHeaders({
+    required List<int> bytes,
+    required String fileName,
+  }) async {
+    final data = await _apiClient.postMultipart(
+      '/exams/import/headers',
+      fileField: 'file',
+      bytes: bytes,
+      filename: fileName,
+    );
+    return StudentExamImportHeadersData.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<StudentExamImportPreviewData> previewExamImport({
+    required List<Map<String, Object?>> rows,
+    required StudentExamImportMapping mapping,
+    String? maHocKy,
+  }) async {
+    final data = await _apiClient.post(
+      '/exams/import/preview',
+      body: {
+        'maHocKy': maHocKy,
+        'rows': rows,
+        'mapping': mapping.toJson(),
+      },
+    );
+    return StudentExamImportPreviewData.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<StudentExamImportMapping> suggestExamImportMappingWithAi({
+    required List<String> headers,
+    required List<Map<String, Object?>> sampleRows,
+  }) async {
+    final data = await _apiClient.post(
+      '/exams/ai/suggest-mapping',
+      body: {'headers': headers, 'sampleRows': sampleRows},
+    );
+    final map = data as Map<String, dynamic>;
+    final rawMapping = map['mapping'];
+    return StudentExamImportMapping.fromJson(
+      rawMapping is Map ? rawMapping : null,
+    );
+  }
+
+  Future<StudentExamImportConfirmData> confirmExamImport({
+    required List<StudentExamImportCandidate> items,
+    bool replaceExistingExams = false,
+  }) async {
+    final data = await _apiClient.post(
+      '/exams/import/confirm',
+      body: {
+        'items': items.map((item) => item.toJson()).toList(),
+        'replaceExistingExams': replaceExistingExams,
+      },
+    );
+    return StudentExamImportConfirmData.fromJson(
+      data is Map ? Map<String, dynamic>.from(data) : const <String, dynamic>{},
+    );
   }
 
   Future<StudentScheduleImportHeadersData> extractScheduleImportHeaders({
@@ -206,38 +365,106 @@ class StudentApiService {
     required List<Map<String, Object?>> rows,
     required StudentScheduleImportMapping mapping,
     String? maHocKy,
+    bool replaceExistingCourseSchedules = false,
   }) async {
     final data = await _apiClient.post(
       '/schedules/import/preview',
-      body: {'maHocKy': maHocKy, 'rows': rows, 'mapping': mapping.toJson()},
+      body: {
+        'maHocKy': maHocKy,
+        'rows': rows,
+        'mapping': mapping.toJson(),
+        'replaceExistingCourseSchedules': replaceExistingCourseSchedules,
+      },
     );
     return StudentScheduleImportPreviewData.fromJson(
       data as Map<String, dynamic>,
     );
   }
 
+  Future<StudentScheduleImportMapping> suggestScheduleImportMappingWithAi({
+    required List<String> headers,
+    required List<Map<String, Object?>> sampleRows,
+  }) async {
+    final data = await _apiClient.post(
+      '/schedules/ai/suggest-mapping',
+      body: {'headers': headers, 'sampleRows': sampleRows},
+    );
+    final map = data as Map<String, dynamic>;
+    final rawMapping = map['mapping'];
+    return StudentScheduleImportMapping.fromJson(
+      rawMapping is Map ? rawMapping : null,
+    );
+  }
+
   Future<StudentScheduleImportConfirmData> confirmScheduleImport({
     required List<StudentScheduleImportCandidate> items,
     String? maHocKy,
+    bool replaceExistingCourseSchedules = false,
   }) async {
     final data = await _apiClient.post(
       '/schedules/import/confirm',
       body: {
         'maHocKy': maHocKy,
         'items': items.map((item) => item.toJson()).toList(),
+        'replaceExistingCourseSchedules': replaceExistingCourseSchedules,
       },
     );
     return StudentScheduleImportConfirmData.fromJson(
-      data as Map<String, dynamic>,
+      data is Map ? Map<String, dynamic>.from(data) : const <String, dynamic>{},
     );
   }
 
-  Future<StudentCourseData> listCourses({String? maHocKy}) async {
+  Future<StudentCourseData> listCourses({String? maHocKy, bool tatCa = false}) async {
     final data = await _apiClient.get(
       '/courses',
-      query: maHocKy == null ? null : {'maHocKy': maHocKy},
+      query: tatCa
+          ? {'tatCa': 'true'}
+          : (maHocKy == null ? null : {'maHocKy': maHocKy}),
     );
     return StudentCourseData.fromJson(data);
+  }
+
+  Future<StudentSemester> createSemester({
+    required String name,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final data = await _apiClient.post(
+      '/courses/semesters',
+      body: _withoutNulls({
+        'tenHocKy': name.trim(),
+        'ngayBatDau': startDate?.trim(),
+        'ngayKetThuc': endDate?.trim(),
+      }),
+    );
+    final map = Map<String, dynamic>.from(data as Map);
+    final rawSemester = map['hocKy'] ?? data;
+    return StudentSemester.fromJson(
+      Map<String, dynamic>.from(rawSemester as Map),
+    );
+  }
+
+  Future<void> updateSemester({
+    required String semesterId,
+    required String name,
+    String? startDate,
+    String? endDate,
+  }) async {
+    await _apiClient.put(
+      '/courses/semesters/${Uri.encodeComponent(semesterId)}',
+      body: _withoutNulls({
+        'tenHocKy': name.trim(),
+        'ngayBatDau': startDate?.trim(),
+        'ngayKetThuc': endDate?.trim(),
+      }),
+    );
+  }
+
+  Future<void> deleteSemester(String semesterId, {bool force = false}) async {
+    await _apiClient.delete(
+      '/courses/semesters/${Uri.encodeComponent(semesterId)}',
+      body: {'force': force},
+    );
   }
 
   Future<StudentCourseItem> createCourse({
@@ -303,6 +530,35 @@ class StudentApiService {
             .toList(),
       },
     );
+  }
+
+  Future<StudentGradeComponent> createGradeComponent({
+    required String courseId,
+    required String name,
+    required double weight,
+    required double score,
+  }) async {
+    final data = await _apiClient.post(
+      '/diem-so',
+      body: {
+        'maMonHoc': courseId,
+        'tenThanhPhan': name.trim(),
+        'trongSo': weight,
+        'diem': score,
+      },
+    );
+    return StudentGradeComponent.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<StudentGradeComponent> updateGradeComponent({
+    required String componentId,
+    required double score,
+  }) async {
+    final data = await _apiClient.put(
+      '/diem-so/${Uri.encodeComponent(componentId)}',
+      body: {'diem': score},
+    );
+    return StudentGradeComponent.fromJson(data as Map<String, dynamic>);
   }
 
   Future<StudentNoteData> listNotes({
@@ -413,6 +669,12 @@ class StudentApiService {
     );
   }
 
+  Future<void> hideNotification(String notificationId) async {
+    await _apiClient.patch(
+      '/notifications/${Uri.encodeComponent(notificationId)}/hide',
+    );
+  }
+
   Future<void> markAllNotificationsRead() async {
     await _apiClient.patch('/notifications/read-all');
   }
@@ -466,6 +728,32 @@ class StudentApiService {
     );
   }
 
+  Future<void> reportDocument({
+    required String documentId,
+    required String reason,
+  }) async {
+    await _apiClient.post(
+      '/student/documents/${Uri.encodeComponent(documentId)}/report',
+      body: {'lyDo': reason.trim()},
+    );
+  }
+
+  Future<Map<String, dynamic>> summarizeDocumentWithAi({
+    required String title,
+    required String content,
+    String? objective,
+  }) async {
+    final data = await _apiClient.post(
+      '/student/documents/ai/summarize',
+      body: {
+        'title': title.trim(),
+        'content': content.trim(),
+        'objective': _nullableTrim(objective),
+      },
+    );
+    return data as Map<String, dynamic>;
+  }
+
   Future<StudentFlashcardDeckData> listFlashcardDecks({
     String? courseId,
   }) async {
@@ -492,6 +780,12 @@ class StudentApiService {
     return StudentFlashcardMutationData.fromJson(data);
   }
 
+  Future<void> deleteFlashcardDeck(String deckId) async {
+    await _apiClient.delete(
+      '/flashcard-decks/${Uri.encodeComponent(deckId)}',
+    );
+  }
+
   Future<StudentFlashcardMutationData> createFlashcard({
     required String deckId,
     required String front,
@@ -499,9 +793,61 @@ class StudentApiService {
   }) async {
     final data = await _apiClient.post(
       '/flashcard-decks/${Uri.encodeComponent(deckId)}/flashcards',
-      body: {'matTruoc': front.trim(), 'matSau': back.trim()},
+      body: {
+        'loaiThe': StudentFlashcardCardType.essay.value,
+        'matTruoc': front.trim(),
+        'matSau': back.trim(),
+      },
     );
     return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardMutationData> createQuizFlashcard({
+    required String deckId,
+    required StudentFlashcardQuizDraft quiz,
+  }) async {
+    final data = await _apiClient.post(
+      '/flashcard-decks/${Uri.encodeComponent(deckId)}/flashcards',
+      body: {
+        'loaiThe': StudentFlashcardCardType.quiz.value,
+        'tracNghiem': quiz.toJson(),
+      },
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardMutationData> updateFlashcard({
+    required String cardId,
+    required String front,
+    required String back,
+  }) async {
+    final data = await _apiClient.put(
+      '/flashcards/${Uri.encodeComponent(cardId)}',
+      body: {
+        'loaiThe': StudentFlashcardCardType.essay.value,
+        'matTruoc': front.trim(),
+        'matSau': back.trim(),
+      },
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardMutationData> updateQuizFlashcard({
+    required String cardId,
+    required StudentFlashcardQuizDraft quiz,
+  }) async {
+    final data = await _apiClient.put(
+      '/flashcards/${Uri.encodeComponent(cardId)}',
+      body: {
+        'loaiThe': StudentFlashcardCardType.quiz.value,
+        'tracNghiem': quiz.toJson(),
+      },
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<void> deleteFlashcard(String cardId) async {
+    await _apiClient.delete('/flashcards/${Uri.encodeComponent(cardId)}');
   }
 
   Future<StudentFlashcardMutationData> importFlashcards({
@@ -518,11 +864,62 @@ class StudentApiService {
     return StudentFlashcardMutationData.fromJson(data);
   }
 
-  Future<StudentFlashcardReviewData> startFlashcardReview(String deckId) async {
+  Future<StudentFlashcardReviewData> listAllFlashcards(String deckId) async {
+    return startFlashcardReview(deckId, hocLai: true);
+  }
+
+  Future<StudentFlashcardMutationData> aiImportFlashcards({
+    required String deckId,
+    required List<int> bytes,
+    required String fileName,
+    int desiredCount = 8,
+  }) async {
+    final data = await _apiClient.postMultipart(
+      '/flashcard-decks/${Uri.encodeComponent(deckId)}/flashcards/ai-import',
+      fileField: 'file',
+      bytes: bytes,
+      filename: fileName,
+      fields: {'desiredCount': '$desiredCount'},
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardMutationData> aiImportEssayFlashcards({
+    required String deckId,
+    required List<int> bytes,
+    required String fileName,
+    int desiredCount = 8,
+  }) async {
+    final data = await _apiClient.postMultipart(
+      '/flashcard-decks/${Uri.encodeComponent(deckId)}/flashcards/ai-import-tu-luan',
+      fileField: 'file',
+      bytes: bytes,
+      filename: fileName,
+      fields: {'desiredCount': '$desiredCount'},
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardReviewData> startFlashcardReview(
+    String deckId, {
+    bool hocLai = false,
+  }) async {
     final data = await _apiClient.get(
       '/flashcard-decks/${Uri.encodeComponent(deckId)}/review',
+      query: hocLai ? {'hocLai': 'true'} : null,
     );
     return StudentFlashcardReviewData.fromJson(data);
+  }
+
+  Future<void> recordFlashcardSessionResult({
+    required String deckId,
+    required int correct,
+    required int wrong,
+  }) async {
+    await _apiClient.post(
+      '/flashcard-decks/${Uri.encodeComponent(deckId)}/session-result',
+      body: {'soCauDung': correct, 'soCauSai': wrong},
+    );
   }
 
   Future<StudentFlashcardMutationData> updateFlashcardProgress({
@@ -532,6 +929,18 @@ class StudentApiService {
     final data = await _apiClient.patch(
       '/flashcards/${Uri.encodeComponent(cardId)}/progress',
       body: {'mucDo': memoryLevel.value},
+    );
+    return StudentFlashcardMutationData.fromJson(data);
+  }
+
+  Future<StudentFlashcardMutationData> submitFlashcardResult({
+    required String cardId,
+    required StudentFlashcardResult result,
+    required int responseMs,
+  }) async {
+    final data = await _apiClient.patch(
+      '/flashcards/${Uri.encodeComponent(cardId)}/progress',
+      body: {'ketQua': result.value, 'thoiGianPhanHoiMs': responseMs},
     );
     return StudentFlashcardMutationData.fromJson(data);
   }
@@ -558,6 +967,45 @@ class StudentApiService {
     return StudentDeadlineItem.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Lấy tùy chỉnh nhắc nhở deadline hiện tại của sinh viên.
+  /// Trả về số giờ trước hạn (`null` = dùng mốc mặc định, `0` = tắt nhắc).
+  Future<int?> getDeadlineReminderPreference() async {
+    final data = await _apiClient.get('/deadlines/reminder-preference');
+    final map = data as Map<String, dynamic>;
+    final soGio = map['soGioTruocHan'];
+    return soGio == null ? null : (soGio as num).toInt();
+  }
+
+  /// Cập nhật tùy chỉnh nhắc nhở deadline.
+  /// [soGioTruocHan]: `null` = mốc mặc định, `0` = tắt, hoặc 3/12/24.
+  Future<int?> updateDeadlineReminderPreference(int? soGioTruocHan) async {
+    final data = await _apiClient.patch(
+      '/deadlines/reminder-preference',
+      body: {'soGioTruocHan': soGioTruocHan},
+    );
+    final map = data as Map<String, dynamic>;
+    final soGio = map['soGioTruocHan'];
+    return soGio == null ? null : (soGio as num).toInt();
+  }
+
+  /// Lấy tùy chọn nhận thông báo đẩy (toggle "Thông báo ứng dụng").
+  /// Trả về `true` nếu đang bật.
+  Future<bool> getAppNotificationPreference() async {
+    final data = await _apiClient.get('/notifications/preference');
+    final map = data as Map<String, dynamic>;
+    return (map['nhanThongBao'] as bool?) ?? true;
+  }
+
+  /// Cập nhật tùy chọn nhận thông báo đẩy.
+  Future<bool> updateAppNotificationPreference(bool nhanThongBao) async {
+    final data = await _apiClient.patch(
+      '/notifications/preference',
+      body: {'nhanThongBao': nhanThongBao},
+    );
+    final map = data as Map<String, dynamic>;
+    return (map['nhanThongBao'] as bool?) ?? nhanThongBao;
+  }
+
   Future<StudentGradeTranscriptData> getGradeTranscript({
     String? maHocKy,
   }) async {
@@ -577,6 +1025,38 @@ class StudentApiService {
       body: {'maHocKy': maHocKy, 'targetGpa': targetGpa},
     );
     return StudentGpaProjectionData.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> getAiGradeStudyAdvice({
+    required String maHocKy,
+    required double targetGpa,
+    String? focus,
+  }) async {
+    final data = await _apiClient.post(
+      '/diem-so/ai/study-advice',
+      body: {
+        'maHocKy': maHocKy,
+        'targetGpa': targetGpa,
+        'focus': _nullableTrim(focus),
+      },
+    );
+    return data as Map<String, dynamic>;
+  }
+
+  Future<AssistantChatReply> chatWithAssistant({
+    required String message,
+    List<AssistantChatMessage> history = const [],
+  }) async {
+    final data = await _apiClient.post(
+      '/assistant/chat',
+      body: {
+        'message': message.trim(),
+        'lichSu': history
+            .map((item) => {'vaiTro': item.role, 'noiDung': item.content})
+            .toList(),
+      },
+    );
+    return AssistantChatReply.fromJson(data as Map<String, dynamic>);
   }
 
   Future<StudentKanbanBoardData> getKanbanBoard(String groupId) async {
@@ -600,6 +1080,7 @@ class StudentApiService {
     String? description,
     DateTime? dueDate,
     String? assigneeId,
+    bool assignAllMembers = false,
   }) async {
     final data = await _apiClient.post(
       '/kanban/tasks',
@@ -607,8 +1088,9 @@ class StudentApiService {
         'maNhom': groupId,
         'tieuDe': title.trim(),
         'moTa': _nullableTrim(description),
-        'hanHoanThanh': dueDate?.toIso8601String(),
+        'hanHoanThanh': dueDate?.toUtc().toIso8601String(),
         'nguoiDuocGiao': _nullableTrim(assigneeId),
+        'giaoChoTatCa': assignAllMembers,
       },
     );
     return _kanbanTaskFromMutation(data);
@@ -625,7 +1107,7 @@ class StudentApiService {
       body: {
         'tieuDe': title.trim(),
         'moTa': _nullableTrim(description),
-        'hanHoanThanh': dueDate?.toIso8601String(),
+        'hanHoanThanh': dueDate?.toUtc().toIso8601String(),
       },
     );
     return _kanbanTaskFromMutation(data);
