@@ -12,9 +12,10 @@ import '../../models/student_schedule_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import '../../services/local/frontend_preferences_service.dart';
+import '../../services/notifications/push_notification_service.dart';
 import '../../l10n/app_localizations.dart';
-import 'focus_mode_screen.dart';
 import 'home_screen.dart';
+import 'student_exam_management_page.dart';
 import 'student_catalog_tab.dart';
 import 'student_notifications_tab.dart';
 import 'student_profile_tab.dart';
@@ -27,6 +28,7 @@ class StudentDashboardPage extends StatefulWidget {
     super.key,
     required this.session,
     required this.studentApi,
+    required this.pushService,
     required this.currentLanguageCode,
     required this.onLanguageChanged,
     required this.onLogout,
@@ -34,6 +36,7 @@ class StudentDashboardPage extends StatefulWidget {
 
   final auth.AuthSession session;
   final StudentApiService studentApi;
+  final PushNotificationService pushService;
   final String currentLanguageCode;
   final ValueChanged<String> onLanguageChanged;
   final Future<void> Function() onLogout;
@@ -179,15 +182,51 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   }
 
   Future<void> _refreshAcademicData() async {
-    final home = widget.studentApi.getStudentHomeData();
-    final schedule = _loadScheduleBundle();
-    final catalog = _loadCatalogBundle();
-    setState(() {
-      _homeDataFuture = home;
-      _scheduleBundleFuture = schedule;
-      _catalogBundleFuture = catalog;
-    });
-    await Future.wait([home, schedule, catalog]);
+    await _refreshStudentDashboardData(labelPrefix: 'academic');
+  }
+
+  Future<void> _refreshAfterScheduleImport() async {
+    await _refreshStudentDashboardData(labelPrefix: 'schedule import');
+  }
+
+  Future<void> _refreshStudentDashboardData({
+    required String labelPrefix,
+  }) async {
+    await Future.wait([
+      _refreshFutureBestEffort<StudentHomeData>(
+        label: '$labelPrefix home',
+        loader: widget.studentApi.getStudentHomeData,
+        assignFuture: (future) => _homeDataFuture = future,
+      ),
+      _refreshFutureBestEffort<_ScheduleBundle>(
+        label: '$labelPrefix schedule',
+        loader: _loadScheduleBundle,
+        assignFuture: (future) => _scheduleBundleFuture = future,
+      ),
+      _refreshFutureBestEffort<_CatalogBundle>(
+        label: '$labelPrefix catalog',
+        loader: _loadCatalogBundle,
+        assignFuture: (future) => _catalogBundleFuture = future,
+      ),
+    ]);
+  }
+
+  Future<void> _refreshFutureBestEffort<T>({
+    required String label,
+    required Future<T> Function() loader,
+    required ValueChanged<Future<T>> assignFuture,
+  }) async {
+    try {
+      final value = await loader();
+      if (!mounted) {
+        return;
+      }
+      setState(() => assignFuture(Future<T>.value(value)));
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Student dashboard refresh failed for $label: $error\n$stackTrace',
+      );
+    }
   }
 
   Future<void> _toggleDeadline(StudentDeadlineItem item) async {
@@ -202,11 +241,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     await _refreshHome();
   }
 
-  void _openFocusMode() {
+  void _openExamManagement() {
     Navigator.of(context).push(
       buildStudentThemedRoute<void>(
         controller: _studentThemeController,
-        builder: (_) => const FocusModeScreen(),
+        builder: (_) => StudentExamManagementPage(studentApi: widget.studentApi),
       ),
     );
   }
@@ -265,7 +304,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     setState(() => _isImportingSchedule = true);
     try {
       final courses = await _fallback(
-        () => widget.studentApi.listCourses(),
+        () => widget.studentApi.listCourses(tatCa: true),
         StudentCourseData(
           message: l10n.t('student.dashboard.schedule.importNoCourses'),
           selectedSemesterId: null,
@@ -273,26 +312,76 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           items: [],
         ),
       );
+      if (courses.semesters.isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.tOr(
+                'student.dashboard.schedule.importNoSemesters',
+                fallbackVi: 'Bạn cần tạo học kỳ trước khi import TKB.',
+                fallbackEn: 'Please create a semester before importing TKB.',
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+
+      final schedules = await widget.studentApi.listSchedules();
+      if (!mounted) {
+        return;
+      }
+      final semesterChoice = await _showScheduleImportSemesterDialog(
+        courses: courses,
+        schedules: schedules,
+      );
+      if (!mounted || semesterChoice == null) {
+        return;
+      }
+
       final headers = await widget.studentApi.extractScheduleImportHeaders(
         bytes: bytes,
         fileName: file.name,
       );
+      var mapping = headers.suggestedMapping;
+      try {
+        mapping = await widget.studentApi.suggestScheduleImportMappingWithAi(
+          headers: headers.headers,
+          sampleRows: headers.rows.take(12).toList(),
+        );
+      } catch (error, stackTrace) {
+        debugPrint('Schedule AI mapping fallback: $error\n$stackTrace');
+        mapping = headers.suggestedMapping;
+      }
+
       final preview = await widget.studentApi.previewScheduleImport(
-        maHocKy: courses.selectedSemesterId,
+        maHocKy: semesterChoice.semester.id,
         rows: headers.rows,
-        mapping: headers.suggestedMapping,
+        mapping: mapping,
+        replaceExistingCourseSchedules:
+            semesterChoice.replaceExistingCourseSchedules,
       );
 
       if (!mounted) {
         return;
       }
 
-      final shouldImport = await _showImportPreviewDialog(headers, preview);
-      if (!mounted || shouldImport != true) {
+      final confirmedPreview = await _showImportPreviewDialog(
+        headers,
+        preview,
+        mapping: mapping,
+        maHocKy: semesterChoice.semester.id,
+        replaceExistingCourseSchedules:
+            semesterChoice.replaceExistingCourseSchedules,
+      );
+      if (!mounted || confirmedPreview == null) {
         return;
       }
 
-      final validItems = preview.validItems;
+      final validItems = confirmedPreview.validItems;
       if (validItems.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -305,12 +394,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       }
 
       final result = await widget.studentApi.confirmScheduleImport(
-        maHocKy: courses.selectedSemesterId,
+        maHocKy: semesterChoice.semester.id,
         items: validItems,
+        replaceExistingCourseSchedules:
+            semesterChoice.replaceExistingCourseSchedules,
       );
-      await _refreshSchedule();
-      await _refreshCatalog();
-      await _refreshHome();
 
       if (!mounted) {
         return;
@@ -319,6 +407,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(result.message)));
+      await _refreshAfterScheduleImport();
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -326,7 +415,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message)));
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Schedule import failed: $error\n$stackTrace');
       if (!mounted) {
         return;
       }
@@ -342,19 +432,246 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
-  Future<bool?> _showImportPreviewDialog(
-    StudentScheduleImportHeadersData headers,
-    StudentScheduleImportPreviewData preview,
-  ) {
+  Future<_ScheduleImportSemesterChoice?> _showScheduleImportSemesterDialog({
+    required StudentCourseData courses,
+    required StudentScheduleData schedules,
+  }) {
     final l10n = context.l10n;
     final colors = _studentThemeController.colors;
-    final invalidSamples = preview.items
+    var selectedSemester = courses.semesters.firstWhere(
+      (semester) => semester.id == courses.selectedSemesterId,
+      orElse: () => courses.semesters.first,
+    );
+
+    int courseCount(String semesterId) {
+      return courses.items
+          .where((course) => course.semesterId == semesterId)
+          .length;
+    }
+
+    int scheduleCount(String semesterId) {
+      return schedules.items
+          .where((schedule) => schedule.semesterId == semesterId)
+          .length;
+    }
+
+    return showDialog<_ScheduleImportSemesterChoice>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final selectedCourseCount = courseCount(selectedSemester.id);
+            final selectedScheduleCount = scheduleCount(selectedSemester.id);
+            final hasExistingAcademicData =
+                selectedCourseCount > 0 || selectedScheduleCount > 0;
+
+            return AlertDialog(
+              backgroundColor: colors.surface,
+              title: Text(
+                l10n.tOr(
+                  'student.dashboard.schedule.importSemesterTitle',
+                  fallbackVi: 'Chọn học kỳ import',
+                  fallbackEn: 'Choose import semester',
+                ),
+                style: TextStyle(
+                  color: colors.text,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSemester.id,
+                    isExpanded: true,
+                    dropdownColor: colors.surface,
+                    decoration: _manualInputDecoration(
+                      l10n.tOr(
+                        'student.dashboard.schedule.importSemesterLabel',
+                        fallbackVi: 'Học kỳ',
+                        fallbackEn: 'Semester',
+                      ),
+                      colors,
+                    ),
+                    items: courses.semesters
+                        .map(
+                          (semester) => DropdownMenuItem(
+                            value: semester.id,
+                            child: Text(
+                              semester.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      final next = courses.semesters.firstWhere(
+                        (semester) => semester.id == value,
+                        orElse: () => selectedSemester,
+                      );
+                      setDialogState(() => selectedSemester = next);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.tOr(
+                      'student.dashboard.schedule.importSemesterSummary',
+                      fallbackVi:
+                          'Đang có {courses} môn học và {schedules} lịch học.',
+                      fallbackEn:
+                          'Currently has {courses} courses and {schedules} schedules.',
+                      arguments: {
+                        'courses': selectedCourseCount,
+                        'schedules': selectedScheduleCount,
+                      },
+                    ),
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  ),
+                  if (hasExistingAcademicData) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.tOr(
+                        'student.dashboard.schedule.importSemesterHasData',
+                        fallbackVi:
+                            'Học kỳ {semester} đã có môn học và lịch học cụ thể, bạn có muốn tiếp tục không?',
+                        fallbackEn:
+                            'Semester {semester} already has courses and detailed schedules. Do you want to continue?',
+                        arguments: {'semester': selectedSemester.name},
+                      ),
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.t('common.cancel')),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(
+                    _ScheduleImportSemesterChoice(
+                      semester: selectedSemester,
+                      replaceExistingCourseSchedules: hasExistingAcademicData,
+                    ),
+                  ),
+                  child: Text(
+                    hasExistingAcademicData
+                        ? l10n.tOr(
+                            'student.dashboard.schedule.importSemesterContinueWithReplace',
+                            fallbackVi: 'Có, tiếp tục',
+                            fallbackEn: 'Yes, continue',
+                          )
+                        : l10n.tOr(
+                            'student.dashboard.schedule.importSemesterContinue',
+                            fallbackVi: 'Tiếp tục',
+                            fallbackEn: 'Continue',
+                          ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<StudentScheduleImportPreviewData?> _showImportPreviewDialog(
+    StudentScheduleImportHeadersData headers,
+    StudentScheduleImportPreviewData preview, {
+    required StudentScheduleImportMapping mapping,
+    required String? maHocKy,
+    required bool replaceExistingCourseSchedules,
+  }) async {
+    var currentPreview = preview;
+    var currentMapping = mapping;
+
+    while (mounted) {
+      final result = await _showImportPreviewDialogStep(
+        headers,
+        currentPreview,
+        mapping: currentMapping,
+      );
+      if (result is StudentScheduleImportPreviewData) {
+        return result;
+      }
+      if (result is! _ScheduleImportMappingRefresh) {
+        return null;
+      }
+
+      try {
+        currentPreview = await widget.studentApi.previewScheduleImport(
+          maHocKy: maHocKy,
+          rows: headers.rows,
+          mapping: result.mapping,
+          replaceExistingCourseSchedules: replaceExistingCourseSchedules,
+        );
+        currentMapping = result.mapping;
+      } on ApiException catch (error) {
+        if (!mounted) {
+          return null;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Schedule manual mapping preview failed: $error\n$stackTrace',
+        );
+        if (!mounted) {
+          return null;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              context.l10n.t(
+                'student.dashboard.schedule.importMappingPreviewError',
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return null;
+  }
+
+  Future<Object?> _showImportPreviewDialogStep(
+    StudentScheduleImportHeadersData headers,
+    StudentScheduleImportPreviewData preview, {
+    required StudentScheduleImportMapping mapping,
+  }) {
+    final l10n = context.l10n;
+    final colors = _studentThemeController.colors;
+    final currentPreview = preview;
+    final selectedColumns = _scheduleMappingToSelections(mapping);
+
+    final headerOptions = <String>[];
+    for (final header in headers.headers) {
+      if (!headerOptions.contains(header)) {
+        headerOptions.add(header);
+      }
+    }
+    for (final value in selectedColumns.values) {
+      if (value != null && !headerOptions.contains(value)) {
+        headerOptions.add(value);
+      }
+    }
+    final invalidSamples = currentPreview.items
         .where((item) => !item.isValid && item.errors.isNotEmpty)
         .take(3)
         .toList();
-    final canImport = preview.validItems.isNotEmpty;
+    final canImport = currentPreview.validItems.isNotEmpty;
 
-    return showDialog<bool>(
+    return showDialog<Object?>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -363,8 +680,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             l10n.t('student.dashboard.schedule.importTitle'),
             style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
           ),
-          content: SingleChildScrollView(
-            child: Column(
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -375,13 +694,13 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                 const SizedBox(height: 14),
                 _ImportPreviewStat(
                   label: l10n.t('student.dashboard.schedule.importValidRows'),
-                  value: preview.validRows.toString(),
+                  value: currentPreview.validRows.toString(),
                   color: const Color(0xFF10B981),
                 ),
                 const SizedBox(height: 8),
                 _ImportPreviewStat(
                   label: l10n.t('student.dashboard.schedule.importRowsToCheck'),
-                  value: preview.invalidRows.toString(),
+                  value: currentPreview.invalidRows.toString(),
                   color: const Color(0xFFF59E0B),
                 ),
                 const SizedBox(height: 8),
@@ -389,9 +708,40 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   label: l10n.t(
                     'student.dashboard.schedule.importAutoCreatedCourses',
                   ),
-                  value: preview.autoCreateCourseRows.toString(),
+                  value: currentPreview.autoCreateCourseRows.toString(),
                   color: const Color(0xFF818CF8),
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.t(
+                    'student.dashboard.schedule.importMappedColumnsTitle',
+                  ),
+                  style: TextStyle(
+                    color: colors.text,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.t(
+                    'student.dashboard.schedule.importMappedColumnsSubtitle',
+                  ),
+                  style: TextStyle(color: colors.textMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                for (final field in _scheduleImportMappingFields(l10n))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _ImportMappingSelector(
+                      field: field,
+                      headers: headerOptions,
+                      selectedColumn: selectedColumns[field.key],
+                      colors: colors,
+                      onChanged: (value) {
+                        selectedColumns[field.key] = value;
+                      },
+                    ),
+                  ),
                 if (invalidSamples.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -419,21 +769,43 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                   ),
                 ],
               ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop(),
               child: Text(l10n.t('common.cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(
+                _ScheduleImportMappingRefresh(
+                  _scheduleMappingFromSelections(selectedColumns),
+                ),
+              ),
+              child: Text(
+                l10n.t('student.dashboard.schedule.importMappingRefresh'),
+              ),
             ),
             ElevatedButton(
               onPressed: canImport
-                  ? () => Navigator.of(context).pop(true)
+                  ? () {
+                      final selectedMapping = _scheduleMappingFromSelections(
+                        selectedColumns,
+                      );
+                      if (!_scheduleMappingsEqual(mapping, selectedMapping)) {
+                        Navigator.of(context).pop(
+                          _ScheduleImportMappingRefresh(selectedMapping),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).pop(currentPreview);
+                    }
                   : null,
               child: Text(
                 l10n.t(
                   'student.dashboard.schedule.importDialogImport',
-                  arguments: {'count': preview.validItems.length},
+                  arguments: {'count': currentPreview.validItems.length},
                 ),
               ),
             ),
@@ -512,17 +884,183 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
-  Future<_ManualScheduleInput?> _showManualScheduleDialog(
-    List<StudentCourseItem> courses,
-  ) {
+  Future<void> _editSchedule(StudentScheduleItem item) async {
+    final l10n = context.l10n;
+    if (_isSavingManualSchedule) {
+      return;
+    }
+
+    try {
+      final courses = await widget.studentApi.listCourses();
+      if (!mounted) {
+        return;
+      }
+
+      if (courses.items.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.t('student.dashboard.schedule.manualNoCourses')),
+          ),
+        );
+        return;
+      }
+
+      final input = await _showManualScheduleDialog(
+        courses.items,
+        initial: item,
+      );
+      if (!mounted || input == null) {
+        return;
+      }
+
+      setState(() => _isSavingManualSchedule = true);
+      await widget.studentApi.updateSchedule(
+        scheduleId: item.id,
+        courseId: input.courseId,
+        dayOfWeek: input.dayOfWeek,
+        startPeriod: input.startPeriod,
+        periodCount: input.periodCount,
+        room: input.room,
+      );
+      await _refreshSchedule();
+      await _refreshHome();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.t('student.dashboard.schedule.editSuccess')),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.t('student.dashboard.schedule.editError'))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingManualSchedule = false);
+      }
+    }
+  }
+
+  Future<void> _deleteSchedule(StudentScheduleItem item) async {
     final l10n = context.l10n;
     final colors = _studentThemeController.colors;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            l10n.t('student.dashboard.schedule.deleteTitle'),
+            style: TextStyle(
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            l10n.t(
+              'student.dashboard.schedule.deleteConfirm',
+              arguments: {'course': item.courseName},
+            ),
+            style: TextStyle(color: colors.text),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.t('common.cancel')),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF809F),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(
+                l10n.t('student.dashboard.schedule.deleteConfirmAction'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await widget.studentApi.deleteSchedule(scheduleId: item.id);
+      await _refreshSchedule();
+      await _refreshHome();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.t('student.dashboard.schedule.deleteSuccess')),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.t('student.dashboard.schedule.deleteError')),
+        ),
+      );
+    }
+  }
+
+  Future<_ManualScheduleInput?> _showManualScheduleDialog(
+    List<StudentCourseItem> courses, {
+    StudentScheduleItem? initial,
+  }) {
+    final l10n = context.l10n;
+    final colors = _studentThemeController.colors;
+    final isEditing = initial != null;
     final formKey = GlobalKey<FormState>();
-    final roomController = TextEditingController();
-    var selectedCourseId = courses.first.id;
-    var selectedDay = 2;
-    var selectedStartPeriod = 1;
-    var selectedPeriodCount = 3;
+    final roomController = TextEditingController(text: initial?.room ?? '');
+    final hasInitialCourse =
+        initial != null &&
+        courses.any((course) => course.id == initial.courseId);
+    var selectedCourseId = hasInitialCourse
+        ? initial.courseId
+        : courses.first.id;
+    var selectedDay = initial?.dayOfWeek ?? 2;
+    var selectedStartPeriod = initial?.startPeriod ?? 1;
+    var selectedPeriodCount = initial?.periodCount ?? 3;
 
     return showDialog<_ManualScheduleInput>(
       context: context,
@@ -539,10 +1077,17 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               ),
               title: Row(
                 children: [
-                  Icon(Icons.add_circle_outline, color: colors.primaryStrong),
+                  Icon(
+                    isEditing ? Icons.edit_outlined : Icons.add_circle_outline,
+                    color: colors.primaryStrong,
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.t('student.dashboard.schedule.manualTitle'),
+                    l10n.t(
+                      isEditing
+                          ? 'student.dashboard.schedule.editTitle'
+                          : 'student.dashboard.schedule.manualTitle',
+                    ),
                     style: TextStyle(
                       color: colors.text,
                       fontSize: 16,
@@ -724,7 +1269,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                         }
                       : null,
                   child: Text(
-                    l10n.t('student.dashboard.schedule.manualSave'),
+                    l10n.t(
+                      isEditing
+                          ? 'student.dashboard.schedule.editSave'
+                          : 'student.dashboard.schedule.manualSave',
+                    ),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -736,9 +1285,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     ).whenComplete(roomController.dispose);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final screens = [
+  List<Widget> _buildScreens() {
+    return [
       FutureBuilder<StudentHomeData>(
         future: _homeDataFuture,
         initialData: StudentHomeData.fromCurrentUser(widget.session.user),
@@ -753,7 +1301,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               courses: snapshot.data?.courses ?? const [],
               projects: snapshot.data?.projects ?? const [],
               schedule: snapshot.data?.schedule ?? const [],
-              onOpenFocusMode: _openFocusMode,
+              onOpenExamManagement: _openExamManagement,
               onOpenProfile: _openProfile,
               onLogout: widget.onLogout,
             ),
@@ -764,17 +1312,27 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         future: _scheduleBundleFuture,
         builder: (context, snapshot) {
           final bundle = snapshot.data ?? _ScheduleBundle.empty();
-          return StudentScheduleTab(
-            data: bundle.schedules,
-            deadlines: bundle.deadlines,
-            onRefresh: _refreshSchedule,
-            onToggleDeadline: _toggleDeadline,
-            onImportSchedule: _importSchedule,
-            onAddScheduleManually: _addScheduleManually,
-            studentApi: widget.studentApi,
-            onViewAllNotifications: _openNotifications,
-            isImportingSchedule: _isImportingSchedule,
-            isSavingManualSchedule: _isSavingManualSchedule,
+          return FutureBuilder<_CatalogBundle>(
+            future: _catalogBundleFuture,
+            builder: (context, catalogSnapshot) {
+              final catalog = catalogSnapshot.data ?? _CatalogBundle.empty();
+              return StudentScheduleTab(
+                data: bundle.schedules,
+                deadlines: bundle.deadlines,
+                onRefresh: _refreshAcademicData,
+                onToggleDeadline: _toggleDeadline,
+                onImportSchedule: _importSchedule,
+                onAddScheduleManually: _addScheduleManually,
+                onEditSchedule: _editSchedule,
+                onDeleteSchedule: _deleteSchedule,
+                studentApi: widget.studentApi,
+                onViewAllNotifications: _openNotifications,
+                isImportingSchedule: _isImportingSchedule,
+                isSavingManualSchedule: _isSavingManualSchedule,
+                preferredSemesterName: _selectedSemesterName(catalog.courses),
+                semesterOptions: _semesterNames(catalog.courses),
+              );
+            },
           );
         },
       ),
@@ -790,7 +1348,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             studentApi: widget.studentApi,
             onChangeTab: _selectTab,
             onAcademicDataChanged: _refreshAcademicData,
-            onOpenFocusMode: _openFocusMode,
+            onOpenExamManagement: _openExamManagement,
             onRefresh: _refreshCatalog,
           );
         },
@@ -803,6 +1361,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           return StudentSettingsTab(
             user: snapshot.data ?? widget.session.user,
             studentApi: widget.studentApi,
+            preferences: _frontendPreferences,
+            pushService: widget.pushService,
             currentSessionRefreshToken: widget.session.refreshToken,
             isDarkMode: !_studentThemeController.isLight,
             currentLanguageCode: _languageCode,
@@ -818,11 +1378,15 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         },
       ),
     ];
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _studentThemeController,
       builder: (context, _) {
         final colors = _studentThemeController.colors;
+        final screens = _buildScreens();
         return StudentThemeScope(
           controller: _studentThemeController,
           child: Theme(
@@ -875,6 +1439,30 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 
+  List<String> _semesterNames(StudentCourseData courses) {
+    final names = <String>{
+      for (final semester in courses.semesters)
+        if (semester.name.trim().isNotEmpty && semester.name.trim() != '--')
+          semester.name.trim(),
+    }.toList();
+    names.sort();
+    return names;
+  }
+
+  String? _selectedSemesterName(StudentCourseData courses) {
+    final selectedId = courses.selectedSemesterId;
+    if (selectedId == null) {
+      return null;
+    }
+    for (final semester in courses.semesters) {
+      if (semester.id == selectedId) {
+        final name = semester.name.trim();
+        return name.isEmpty || name == '--' ? null : name;
+      }
+    }
+    return null;
+  }
+
   Future<T> _fallback<T>(Future<T> Function() loader, T fallback) async {
     try {
       return await loader();
@@ -900,11 +1488,124 @@ class _ManualScheduleInput {
   final String room;
 }
 
+class _ScheduleImportSemesterChoice {
+  const _ScheduleImportSemesterChoice({
+    required this.semester,
+    required this.replaceExistingCourseSchedules,
+  });
+
+  final StudentSemester semester;
+  final bool replaceExistingCourseSchedules;
+}
+
 class _ManualDayOption {
   const _ManualDayOption({required this.value, required this.label});
 
   final int value;
   final String label;
+}
+
+class _ImportMappingField {
+  const _ImportMappingField({required this.key, required this.label});
+
+  final String key;
+  final String label;
+}
+
+class _ScheduleImportMappingRefresh {
+  const _ScheduleImportMappingRefresh(this.mapping);
+
+  final StudentScheduleImportMapping mapping;
+}
+
+const _unmappedScheduleColumnValue = '__unmapped__';
+
+List<_ImportMappingField> _scheduleImportMappingFields(
+  AppLocalizationController l10n,
+) {
+  return [
+    _ImportMappingField(
+      key: 'maMonHoc',
+      label: l10n.t('student.dashboard.schedule.importMappingMaMonHoc'),
+    ),
+    _ImportMappingField(
+      key: 'maMon',
+      label: l10n.t('student.dashboard.schedule.importMappingMaMon'),
+    ),
+    _ImportMappingField(
+      key: 'tenMon',
+      label: l10n.t('student.dashboard.schedule.importMappingTenMon'),
+    ),
+    _ImportMappingField(
+      key: 'thu',
+      label: l10n.t('student.dashboard.schedule.importMappingThu'),
+    ),
+    _ImportMappingField(
+      key: 'tietBatDau',
+      label: l10n.t('student.dashboard.schedule.importMappingTietBatDau'),
+    ),
+    _ImportMappingField(
+      key: 'soTiet',
+      label: l10n.t('student.dashboard.schedule.importMappingSoTiet'),
+    ),
+    _ImportMappingField(
+      key: 'soTinChi',
+      label: l10n.t('student.dashboard.schedule.importMappingSoTinChi'),
+    ),
+    _ImportMappingField(
+      key: 'phongHoc',
+      label: l10n.t('student.dashboard.schedule.importMappingPhongHoc'),
+    ),
+    _ImportMappingField(
+      key: 'ngayBatDau',
+      label: l10n.t('student.dashboard.schedule.importMappingNgayBatDau'),
+    ),
+    _ImportMappingField(
+      key: 'ngayKetThuc',
+      label: l10n.t('student.dashboard.schedule.importMappingNgayKetThuc'),
+    ),
+  ];
+}
+
+Map<String, String?> _scheduleMappingToSelections(
+  StudentScheduleImportMapping mapping,
+) {
+  return {
+    'maMonHoc': mapping.maMonHoc,
+    'maMon': mapping.maMon,
+    'tenMon': mapping.tenMon,
+    'thu': mapping.thu,
+    'tietBatDau': mapping.tietBatDau,
+    'soTiet': mapping.soTiet,
+    'soTinChi': mapping.soTinChi,
+    'phongHoc': mapping.phongHoc,
+    'ngayBatDau': mapping.ngayBatDau,
+    'ngayKetThuc': mapping.ngayKetThuc,
+  };
+}
+
+StudentScheduleImportMapping _scheduleMappingFromSelections(
+  Map<String, String?> selections,
+) {
+  return StudentScheduleImportMapping(
+    maMonHoc: selections['maMonHoc'],
+    maMon: selections['maMon'],
+    tenMon: selections['tenMon'],
+    thu: selections['thu'],
+    tietBatDau: selections['tietBatDau'],
+    soTiet: selections['soTiet'],
+    soTinChi: selections['soTinChi'],
+    phongHoc: selections['phongHoc'],
+    ngayBatDau: selections['ngayBatDau'],
+    ngayKetThuc: selections['ngayKetThuc'],
+  );
+}
+
+bool _scheduleMappingsEqual(
+  StudentScheduleImportMapping first,
+  StudentScheduleImportMapping second,
+) {
+  return first.toJson().toString() == second.toJson().toString();
 }
 
 List<_ManualDayOption> _manualDayOptions(AppLocalizationController l10n) {
@@ -958,6 +1659,75 @@ InputDecoration _manualInputDecoration(
       borderSide: BorderSide(color: colors.primaryStrong, width: 1.4),
     ),
   );
+}
+
+class _ImportMappingSelector extends StatelessWidget {
+  const _ImportMappingSelector({
+    required this.field,
+    required this.headers,
+    required this.selectedColumn,
+    required this.colors,
+    required this.onChanged,
+  });
+
+  final _ImportMappingField field;
+  final List<String> headers;
+  final String? selectedColumn;
+  final StudentThemeColors colors;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final selectedValue = selectedColumn ?? _unmappedScheduleColumnValue;
+    return DropdownButtonFormField<String>(
+      key: ValueKey('${field.key}-$selectedValue'),
+      initialValue: selectedValue,
+      isExpanded: true,
+      dropdownColor: colors.surface,
+      iconEnabledColor: colors.textSubtle,
+      style: TextStyle(color: colors.text, fontSize: 13),
+      decoration: InputDecoration(
+        labelText: field.label,
+        labelStyle: TextStyle(color: colors.textSubtle, fontSize: 12),
+        filled: true,
+        fillColor: colors.surfaceAlt,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colors.primaryStrong, width: 1.3),
+        ),
+      ),
+      items: [
+        DropdownMenuItem(
+          value: _unmappedScheduleColumnValue,
+          child: Text(
+            l10n.t('student.dashboard.schedule.importMappingUnmapped'),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        for (final header in headers)
+          DropdownMenuItem(
+            value: header,
+            child: Text(header, overflow: TextOverflow.ellipsis),
+          ),
+      ],
+      onChanged: (value) {
+        onChanged(value == _unmappedScheduleColumnValue ? null : value);
+      },
+    );
+  }
 }
 
 class _ImportPreviewStat extends StatelessWidget {
