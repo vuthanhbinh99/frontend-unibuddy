@@ -107,9 +107,38 @@ class StudentHomeData {
       0,
       (sum, item) => sum + item.credits,
     );
+    final selectedSemesterName = _selectedSemesterName(courseData);
     final todayBackendDay = _todayBackendDay();
-    final todaySchedule = scheduleData.items
-        .where((item) => item.dayOfWeek == todayBackendDay)
+    final today = _normalizeDate(DateTime.now());
+    final todayScheduleItems =
+        scheduleData.items
+            .where(
+              (item) =>
+                  item.dayOfWeek == todayBackendDay &&
+                  _belongsToSemester(item, selectedSemesterName) &&
+                  _isActiveOnDate(item, today),
+            )
+            .toList()
+          ..sort((left, right) {
+            final periodComparison = left.startPeriod.compareTo(
+              right.startPeriod,
+            );
+            if (periodComparison != 0) {
+              return periodComparison;
+            }
+
+            final roomComparison = (left.room ?? '').compareTo(
+              right.room ?? '',
+            );
+            if (roomComparison != 0) {
+              return roomComparison;
+            }
+
+            return left.courseName.compareTo(right.courseName);
+          });
+    final seenScheduleKeys = <String>{};
+    final todaySchedule = todayScheduleItems
+        .where((item) => seenScheduleKeys.add(_homeScheduleKey(item)))
         .map(
           (item) => ScheduleItem(
             name: item.courseName,
@@ -126,7 +155,7 @@ class StudentHomeData {
         name: user.fullName,
         avatarUrl: user.avatarUrl,
         major: user.role.name,
-        joinedSemester: _selectedSemesterName(courseData),
+        joinedSemester: selectedSemesterName,
         completedCredits: gradeData.summary.calculatedCredits,
         totalCreditsNeeded: totalCredits > 0 ? totalCredits : fallbackCredits,
         targetGpa: 0,
@@ -151,12 +180,124 @@ int _todayBackendDay() {
   return weekday == DateTime.sunday ? 8 : weekday + 1;
 }
 
+bool _belongsToSemester(
+  schedule_model.StudentScheduleItem item,
+  String selectedSemesterName,
+) {
+  if (selectedSemesterName.isEmpty || selectedSemesterName == '--') {
+    return true;
+  }
+
+  final itemSemester = item.semesterName.trim();
+  if (itemSemester.isEmpty || itemSemester == '--') {
+    return true;
+  }
+
+  return itemSemester == selectedSemesterName;
+}
+
+bool _isActiveOnDate(schedule_model.StudentScheduleItem item, DateTime date) {
+  final start = _parseFlexibleDate(item.startDate);
+  final end = _parseFlexibleDate(item.endDate);
+
+  if (start == null || end == null) {
+    return false;
+  }
+
+  final normalizedStart = _normalizeDate(start);
+  final normalizedEnd = _normalizeDate(end);
+
+  return !date.isBefore(normalizedStart) && !date.isAfter(normalizedEnd);
+}
+
+DateTime _normalizeDate(DateTime date) {
+  return DateTime(date.year, date.month, date.day);
+}
+
+DateTime? _parseFlexibleDate(String? raw) {
+  final text = raw?.trim();
+  if (text == null || text.isEmpty) {
+    return null;
+  }
+
+  final iso = DateTime.tryParse(text);
+  if (iso != null) {
+    return DateTime(iso.year, iso.month, iso.day);
+  }
+
+  final normalized = text.replaceAll('-', '/');
+  final parts = normalized.split('/');
+  if (parts.length != 3) {
+    return null;
+  }
+
+  final first = int.tryParse(parts[0]);
+  final second = int.tryParse(parts[1]);
+  final third = int.tryParse(parts[2]);
+  if (first == null || second == null || third == null) {
+    return null;
+  }
+
+  if (parts[0].length == 4) {
+    return DateTime(first, second, third);
+  }
+
+  final year = third < 100 ? 2000 + third : third;
+  return DateTime(year, second, first);
+}
+
+String _homeScheduleKey(schedule_model.StudentScheduleItem item) {
+  final normalizedStart = _normalizedDateKey(item.startDate);
+  final normalizedEnd = _normalizedDateKey(item.endDate);
+
+  return [
+    item.courseCode ?? '',
+    item.courseName,
+    item.dayOfWeek.toString(),
+    item.startPeriod.toString(),
+    item.endPeriod.toString(),
+    item.room ?? '',
+    normalizedStart,
+    normalizedEnd,
+  ].join('|');
+}
+
 String _selectedSemesterName(catalog.StudentCourseData data) {
   final selectedId = data.selectedSemesterId;
   if (selectedId == null) {
-    return data.semesters.isEmpty ? '--' : data.semesters.first.name;
+    final today = _normalizeDate(DateTime.now());
+
+    for (final semester in data.semesters) {
+      final start = _parseFlexibleDate(semester.startDate);
+      final end = _parseFlexibleDate(semester.endDate);
+
+      if (start == null || end == null) {
+        continue;
+      }
+
+      final normalizedStart = _normalizeDate(start);
+      final normalizedEnd = _normalizeDate(end);
+      if (!today.isBefore(normalizedStart) && !today.isAfter(normalizedEnd)) {
+        return semester.name;
+      }
+    }
+
+    return '--';
   }
 
   final selected = data.semesters.where((item) => item.id == selectedId);
   return selected.isEmpty ? '--' : selected.first.name;
+}
+
+String _normalizedDateKey(String? raw) {
+  final parsed = _parseFlexibleDate(raw);
+  if (parsed == null) {
+    return raw?.trim() ?? '';
+  }
+
+  final normalized = _normalizeDate(parsed);
+  final year = normalized.year.toString().padLeft(4, '0');
+  final month = normalized.month.toString().padLeft(2, '0');
+  final day = normalized.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
 }
