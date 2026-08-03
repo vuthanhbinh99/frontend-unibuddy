@@ -44,6 +44,11 @@ class AuthApiService {
     return _parseLoginResult(data);
   }
 
+  Future<List<PublicSchool>> listSchools() async {
+    final data = await _apiClient.get('/auth/schools');
+    return _asList(data).map((item) => PublicSchool.fromJson(item)).toList();
+  }
+
   AuthLoginResult _parseLoginResult(Object? data) {
     final payload = data as Map<String, dynamic>;
     if (payload['requiresPasswordChange'] == true) {
@@ -126,6 +131,11 @@ class AuthApiService {
 
   Map<String, Object?> _withoutNulls(Map<String, Object?> input) {
     return Map.fromEntries(input.entries.where((entry) => entry.value != null));
+  }
+
+  List<Map<String, dynamic>> _asList(Object? data) {
+    final list = data as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
   }
 
   String? _blankToNull(String? value) {
