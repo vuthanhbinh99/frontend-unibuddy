@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/student_course_models.dart';
+import '../../models/student_kanban_models.dart';
 import '../../models/student_schedule_models.dart';
 import '../../models/student_study_group_models.dart';
 import '../../services/api/api_exception.dart';
@@ -168,50 +170,10 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
   }
 
   Future<void> _showJoinDialog() async {
-    final colors = StudentThemeScope.colorsOf(context);
-    final controller = TextEditingController();
     final inviteCode = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: colors.surface,
-          title: Text(
-            'Tham gia nhóm',
-            style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            style: TextStyle(color: colors.text),
-            decoration: InputDecoration(
-              labelText: 'Mã mời',
-              labelStyle: TextStyle(color: colors.primaryStrong),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primaryStrong,
-              ),
-              child: Text(
-                'Tham gia',
-                style: TextStyle(color: colors.onPrimary),
-              ),
-            ),
-          ],
-        );
-      },
+      builder: (context) => const _JoinGroupDialog(),
     );
-    controller.dispose();
 
     if (inviteCode == null || inviteCode.trim().isEmpty) {
       return;
@@ -261,7 +223,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
   }
 
   Future<void> _deleteGroup(StudentStudyGroup group) async {
-    final password = await _askPassword(group);
+    final password = await _askPassword();
     if (password == null || password.isEmpty) {
       return;
     }
@@ -315,39 +277,11 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
-  Future<String?> _askPassword(StudentStudyGroup group) {
-    final colors = StudentThemeScope.colorsOf(context);
-    final controller = TextEditingController();
+  Future<String?> _askPassword() {
     return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          'Xác nhận giải tán',
-          style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
-        ),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          style: TextStyle(color: colors.text),
-          decoration: InputDecoration(
-            labelText: 'Mật khẩu tài khoản',
-            labelStyle: TextStyle(color: colors.primaryStrong),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Xóa nhóm'),
-          ),
-        ],
-      ),
-    ).whenComplete(controller.dispose);
+      builder: (context) => const _DeleteGroupPasswordDialog(),
+    );
   }
 
   void _openGroupRoom(StudentStudyGroup group) {
@@ -993,6 +927,112 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
   }
 }
 
+class _JoinGroupDialog extends StatefulWidget {
+  const _JoinGroupDialog();
+
+  @override
+  State<_JoinGroupDialog> createState() => _JoinGroupDialogState();
+}
+
+class _JoinGroupDialogState extends State<_JoinGroupDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: colors.surface,
+      title: Text(
+        'Tham gia nhóm',
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.characters,
+        autocorrect: false,
+        enableSuggestions: false,
+        style: TextStyle(color: colors.text),
+        decoration: InputDecoration(
+          labelText: 'Mã mời',
+          labelStyle: TextStyle(color: colors.primaryStrong),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.primaryStrong,
+          ),
+          child: Text('Tham gia', style: TextStyle(color: colors.onPrimary)),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeleteGroupPasswordDialog extends StatefulWidget {
+  const _DeleteGroupPasswordDialog();
+
+  @override
+  State<_DeleteGroupPasswordDialog> createState() =>
+      _DeleteGroupPasswordDialogState();
+}
+
+class _DeleteGroupPasswordDialogState
+    extends State<_DeleteGroupPasswordDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return AlertDialog(
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Text(
+        'Xác nhận giải tán',
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
+      ),
+      content: TextField(
+        controller: _controller,
+        obscureText: true,
+        style: TextStyle(color: colors.text),
+        decoration: InputDecoration(
+          labelText: 'Mật khẩu tài khoản',
+          labelStyle: TextStyle(color: colors.primaryStrong),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Xóa nhóm'),
+        ),
+      ],
+    );
+  }
+}
+
 class _CreateGroupDialog extends StatefulWidget {
   const _CreateGroupDialog({required this.courses});
 
@@ -1058,14 +1098,30 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               initialValue: _selectedCourseId,
+              isExpanded: true,
               dropdownColor: colors.surface,
               style: TextStyle(color: colors.text),
               decoration: const InputDecoration(labelText: 'Môn học trong TKB'),
+              selectedItemBuilder: (context) {
+                return widget.courses
+                    .map(
+                      (course) => Text(
+                        course.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                    .toList();
+              },
               items: widget.courses
                   .map(
                     (course) => DropdownMenuItem(
                       value: course.id,
-                      child: Text(course.displayName),
+                      child: Text(
+                        course.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   )
                   .toList(),
@@ -1113,24 +1169,87 @@ class _StudyGroupRoomPage extends StatefulWidget {
 }
 
 class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
-  final TextEditingController _controller = TextEditingController();
-  final List<Map<String, Object>> _messages = [];
+  StudentKanbanBoardData? _board;
+  bool _loadingBoard = true;
+  String? _boardError;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadBoard();
   }
 
-  void _sendMessage() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) {
+  Future<void> _loadBoard() async {
+    setState(() {
+      _loadingBoard = true;
+      _boardError = null;
+    });
+
+    try {
+      final board = await widget.studentApi.getKanbanBoard(widget.group.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _board = board;
+        _loadingBoard = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingBoard = false;
+        _boardError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingBoard = false;
+        _boardError = 'Không thể tải dữ liệu nhóm lúc này.';
+      });
+    }
+  }
+
+  Future<void> _openExternalChat(StudentStudyGroup group) async {
+    final raw = group.chatLink.trim();
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nhóm chưa có link chat ngoài.')),
+      );
       return;
     }
-    setState(() {
-      _messages.add({'sender': 'Bạn', 'text': text, 'isYou': true});
-      _controller.clear();
-    });
+
+    final uri = _normalizeChatUri(raw);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (opened) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: raw));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Không mở được app chat, đã sao chép link để bạn dán thủ công.',
+        ),
+      ),
+    );
+  }
+
+  Uri _normalizeChatUri(String raw) {
+    final parsed = Uri.tryParse(raw);
+    if (parsed != null && parsed.hasScheme) {
+      return parsed;
+    }
+    return Uri.parse('https://$raw');
   }
 
   @override
@@ -1190,113 +1309,305 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             color: colors.surfaceAlt.withValues(alpha: 0.75),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.link, size: 16, color: colors.primaryStrong),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    group.chatLink.trim().isEmpty
-                        ? 'Nhóm chưa có link chat ngoài'
-                        : group.chatLink,
-                    style: TextStyle(color: colors.textMuted, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Icon(Icons.link, size: 16, color: colors.primaryStrong),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        group.chatLink.trim().isEmpty
+                            ? 'Nhóm chưa có link chat ngoài'
+                            : group.chatLink,
+                        style: TextStyle(color: colors.textMuted, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (group.chatLink.trim().isNotEmpty)
+                      TextButton(
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: group.chatLink),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Đã sao chép link chat.'),
+                            ),
+                          );
+                        },
+                        child: const Text('Copy'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openExternalChat(group),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.primaryStrong,
+                      foregroundColor: colors.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.forum_outlined),
+                    label: const Text(
+                      'Vào nhóm chat Zalo/Discord',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
-                if (group.chatLink.trim().isNotEmpty)
-                  TextButton(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: group.chatLink));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đã sao chép link chat.')),
-                      );
-                    },
-                    child: const Text('Copy'),
-                  ),
               ],
             ),
           ),
-          Expanded(
-            child: _messages.isEmpty
-                ? Center(
-                    child: Text(
-                      'Hãy là người nhắn tin đầu tiên!',
-                      style: TextStyle(color: colors.textSubtle),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      final isYou = msg['isYou'] as bool;
-                      return Align(
-                        alignment: isYou
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isYou
-                                ? colors.primaryStrong
-                                : colors.surfaceAlt.withValues(alpha: 0.75),
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: isYou
-                                  ? const Radius.circular(16)
-                                  : Radius.zero,
-                              bottomRight: isYou
-                                  ? Radius.zero
-                                  : const Radius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            msg['text'] as String,
-                            style: TextStyle(
-                              color: isYou ? colors.onPrimary : colors.text,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+            ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: colors.surface,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    style: TextStyle(color: colors.text),
-                    decoration: InputDecoration(
-                      hintText: 'Nhập tin nhắn...',
-                      hintStyle: TextStyle(
-                        color: colors.textSubtle,
-                        fontSize: 14,
-                      ),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send, color: colors.primaryStrong),
-                  onPressed: _sendMessage,
-                ),
-              ],
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadBoard,
+              child: _buildGroupInsightBody(colors),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildGroupInsightBody(StudentThemeColors colors) {
+    if (_loadingBoard && _board == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_boardError != null && _board == null) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: colors.tint(colors.danger, lightAlpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: colors.danger.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              _boardError!,
+              style: TextStyle(color: colors.danger, fontSize: 13),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final members = _board?.members ?? const <StudentKanbanMember>[];
+    final tasks = _board?.tasks ?? const <StudentKanbanTask>[];
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      children: [
+        Text(
+          'Thành viên nhóm (${members.length})',
+          style: TextStyle(
+            color: colors.text,
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (members.isEmpty)
+          Text(
+            'Chưa có thành viên nào trong nhóm.',
+            style: TextStyle(color: colors.textSubtle),
+          )
+        else
+          ...members.map(
+            (member) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.border),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: colors.primaryStrong,
+                    child: Text(
+                      member.initials,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: colors.onPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.name,
+                          style: TextStyle(
+                            color: colors.text,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          member.email,
+                          style: TextStyle(
+                            color: colors.textSubtle,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: member.role == 'TRUONG_NHOM'
+                          ? colors.tint(colors.warning, lightAlpha: 0.18)
+                          : colors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      member.role == 'TRUONG_NHOM'
+                          ? 'Trưởng nhóm'
+                          : 'Thành viên',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: member.role == 'TRUONG_NHOM'
+                            ? colors.warning
+                            : colors.textMuted,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Task của nhóm (${tasks.length})',
+              style: TextStyle(
+                color: colors.text,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  studentThemedRoute(
+                    context: context,
+                    builder: (_) => StudentKanbanPage(
+                      studentApi: widget.studentApi,
+                      initialGroupId: widget.group.id,
+                      onViewAllNotifications: widget.onViewAllNotifications,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Mở Kanban'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (tasks.isEmpty)
+          Text(
+            'Nhóm chưa có task nào.',
+            style: TextStyle(color: colors.textSubtle),
+          )
+        else
+          ...tasks.map(
+            (task) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: colors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: TextStyle(
+                            color: colors.text,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          task.status.label,
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    task.assigneeName?.trim().isNotEmpty == true
+                        ? 'Phụ trách: ${task.assigneeName}'
+                        : 'Phụ trách: Chưa gán',
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  ),
+                  if (task.dueDate != null)
+                    Text(
+                      'Hạn: ${_formatDate(task.dueDate!)}',
+                      style: TextStyle(color: colors.textSubtle, fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime value) {
+    final day = value.day.toString().padLeft(2, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    return '$day/$month/${value.year}';
   }
 }
 
