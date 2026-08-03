@@ -29,6 +29,8 @@ class StudentCourseItem {
     required this.name,
     required this.credits,
     required this.semesterName,
+    required this.isAutoCreatedFromScheduleImport,
+    required this.needsGradeConfigWarning,
   });
 
   final String id;
@@ -37,6 +39,8 @@ class StudentCourseItem {
   final String name;
   final int credits;
   final String semesterName;
+  final bool isAutoCreatedFromScheduleImport;
+  final bool needsGradeConfigWarning;
 
   factory StudentCourseItem.fromJson(Map<String, dynamic> json) {
     return StudentCourseItem(
@@ -46,6 +50,9 @@ class StudentCourseItem {
       name: json['tenMon'] as String? ?? '--',
       credits: (json['soTinChi'] as num?)?.toInt() ?? 0,
       semesterName: json['tenHocKy'] as String? ?? '--',
+      isAutoCreatedFromScheduleImport:
+          json['tuDongTaoTuThoiKhoaBieu'] as bool? ?? false,
+      needsGradeConfigWarning: json['canhBaoCauHinhDiem'] as bool? ?? false,
     );
   }
 }
