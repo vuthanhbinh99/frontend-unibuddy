@@ -17,6 +17,7 @@ import 'services/api/modules/student_api_service.dart';
 import 'services/api/modules/system_admin_api_service.dart';
 import 'services/auth/google_identity_service.dart';
 import 'services/local/frontend_preferences_service.dart';
+import 'services/notifications/push_notification_service.dart';
 
 class UniBuddyApp extends StatefulWidget {
   const UniBuddyApp({super.key});
@@ -34,7 +35,9 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   late final GoogleIdentityService _googleIdentityService;
   late final FrontendPreferencesService _frontendPreferences;
   late final AppLocalizationController _localizationController;
+  late final PushNotificationService _pushService;
   AuthSession? _session;
+  String? _fcmToken;
   bool _ready = false;
 
   @override
@@ -47,6 +50,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     _systemAdminApi = SystemAdminApiService(_apiClient);
     _googleIdentityService = GoogleIdentityService();
     _frontendPreferences = FrontendPreferencesService();
+    _pushService = PushNotificationService();
     _localizationController = AppLocalizationController(
       preferences: _frontendPreferences,
     );
@@ -62,8 +66,56 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   Future<void> _bootstrap() async {
     await _localizationController.load();
     _studentApi.setAcceptLanguageCode(_localizationController.languageCode);
+    await _initializePushNotifications();
+    await _restoreFlashcardReminder();
     if (mounted) {
       setState(() => _ready = true);
+    }
+  }
+
+  /// Đặt lại lịch nhắc ôn tập flashcard từ tuỳ chọn đã lưu. Cần chạy lúc khởi
+  /// động vì lịch cục bộ bị xoá sau khi thiết bị khởi động lại hoặc app bị gỡ
+  /// khỏi bộ nhớ. Ngôn ngữ thông báo bám theo ngôn ngữ đang chọn của app.
+  Future<void> _restoreFlashcardReminder() async {
+    try {
+      final enabled =
+          await _frontendPreferences.readFlashcardReminderEnabled();
+      if (!enabled) {
+        return;
+      }
+      final time = await _frontendPreferences.readFlashcardReminderTime();
+      final parts = time.split(':');
+      final hour = int.tryParse(parts.first) ?? 20;
+      final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      final isVietnamese = _localizationController.languageCode == 'vi';
+      await _pushService.scheduleDailyFlashcardReminder(
+        hour: hour,
+        minute: minute,
+        title: isVietnamese ? 'Ôn tập Flashcard' : 'Flashcard review',
+        body: isVietnamese
+            ? 'Đã đến giờ ôn tập flashcard hôm nay. Cùng luyện tập nào!'
+            : "It's time to review your flashcards today. Let's practice!",
+      );
+    } catch (error) {
+      debugPrint('Restore flashcard reminder failed: $error');
+    }
+  }
+
+  /// Khởi tạo FCM: xin quyền, lấy token lần đầu và theo dõi token xoay vòng.
+  /// Bọc try/catch để lỗi FCM (ví dụ thiết bị không có Google Play services)
+  /// không chặn app khởi động.
+  Future<void> _initializePushNotifications() async {
+    try {
+      await _pushService.initialize();
+      _fcmToken = await _pushService.getToken();
+      _pushService.onTokenRefresh.listen((token) {
+        // Cập nhật token cho lần đăng nhập kế tiếp. Backend hiện chưa có
+        // endpoint register-device riêng, nên token mới sẽ được đồng bộ ở
+        // lần login sau (đủ cho phạm vi hiện tại).
+        _fcmToken = token;
+      });
+    } catch (error) {
+      debugPrint('Push notification init failed: $error');
     }
   }
 
@@ -132,6 +184,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     return LoginPage(
       authApi: _authApi,
       googleIdentityService: _googleIdentityService,
+      fcmTokenProvider: () => _fcmToken,
       onLoginSuccess: (session) {
         setState(() => _session = session);
       },
@@ -177,6 +230,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     return StudentDashboardPage(
       session: session,
       studentApi: _studentApi,
+      pushService: _pushService,
       currentLanguageCode: _localizationController.languageCode,
       onLanguageChanged: _handleLanguageChanged,
       onLogout: _logout,
