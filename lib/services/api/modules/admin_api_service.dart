@@ -37,6 +37,37 @@ class AdminApiService {
     await _apiClient.delete('/admin/schools/${Uri.encodeComponent(code)}');
   }
 
+  Future<AdminAcademicRules> getAcademicRules(String code) async {
+    final data = await _apiClient.get(
+      '/admin/schools/${Uri.encodeComponent(code)}/academic-rules',
+    );
+    return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<AdminAcademicRules> updateScoreScale({
+    required String code,
+    required List<AdminScoreScaleLevel> levels,
+  }) async {
+    final data = await _apiClient.put(
+      '/admin/schools/${Uri.encodeComponent(code)}/academic-rules/score-scale',
+      body: {'mucThangDiem': levels.map((level) => level.toJson()).toList()},
+    );
+    return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<AdminAcademicRules> updateAcademicStandings({
+    required String code,
+    required List<AdminAcademicStanding> standings,
+  }) async {
+    final data = await _apiClient.put(
+      '/admin/schools/${Uri.encodeComponent(code)}/academic-rules/academic-standing',
+      body: {
+        'quyCheHocLuc': standings.map((standing) => standing.toJson()).toList(),
+      },
+    );
+    return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
+  }
+
   Future<List<AdminDocumentReport>> listReports({
     AdminReportStatus? status,
   }) async {
