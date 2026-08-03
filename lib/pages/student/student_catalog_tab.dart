@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
@@ -24,7 +24,7 @@ class StudentCatalogTab extends StatelessWidget {
     required this.studentApi,
     required this.onChangeTab,
     required this.onAcademicDataChanged,
-    required this.onOpenFocusMode,
+    required this.onOpenExamManagement,
     required this.onRefresh,
   });
 
@@ -35,7 +35,7 @@ class StudentCatalogTab extends StatelessWidget {
   final StudentApiService studentApi;
   final ValueChanged<int> onChangeTab;
   final Future<void> Function() onAcademicDataChanged;
-  final VoidCallback onOpenFocusMode;
+  final VoidCallback onOpenExamManagement;
   final Future<void> Function() onRefresh;
 
   @override
@@ -96,12 +96,12 @@ class StudentCatalogTab extends StatelessWidget {
         },
       ),
       _CategoryItem(
-        id: 'focus',
-        label: l10n.t('student.dashboard.catalog.focus'),
-        desc: 'Tập trung học tập 25 phút',
-        icon: LucideIcons.alarmClock,
-        color: Colors.pinkAccent,
-        action: onOpenFocusMode,
+        id: 'exams',
+        label: 'Lịch thi',
+        desc: 'Thêm, sửa và import AI lịch thi',
+        icon: LucideIcons.calendar,
+        color: Colors.greenAccent,
+        action: onOpenExamManagement,
       ),
       _CategoryItem(
         id: 'study_groups',
@@ -293,10 +293,11 @@ class StudentCatalogTab extends StatelessWidget {
                                 Text(
                                   cat.desc,
                                   style: TextStyle(
-                                    color: colors.textSubtle,
-                                    fontSize: 9,
+                                    color: colors.textMuted,
+                                    fontSize: 11,
+                                    height: 1.25,
                                   ),
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -311,21 +312,23 @@ class StudentCatalogTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withValues(alpha: 0.06),
+                    color: colors.tint(colors.primaryStrong, lightAlpha: 0.08, darkAlpha: 0.12),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.indigo.withValues(alpha: 0.15),
+                      color: colors.primaryStrong.withValues(alpha: 0.18),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
                       Text('💡', style: TextStyle(fontSize: 20)),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Mẹo học tập: Sử dụng Pomodoro kết hợp với bảng deadline để giữ động lực học tập cho học kỳ này nhé!',
+                          'Mẹo học tập: Cập nhật lịch thi sớm để UniBuddy nhắc bạn trước ngày thi nhé!',
                           style: TextStyle(
-                            color: Color(0xFFA5B4FC),
+                            color: colors.isLight
+                            ? colors.primaryStrong
+                            : const Color(0xFFA5B4FC),
                             fontSize: 10,
                             height: 1.4,
                           ),
@@ -649,3 +652,4 @@ class _CategoryItem {
   final Color color;
   final VoidCallback action;
 }
+
