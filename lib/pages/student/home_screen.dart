@@ -15,7 +15,7 @@ class HomeScreen extends StatelessWidget {
     required this.courses,
     required this.projects,
     required this.schedule,
-    required this.onOpenFocusMode,
+    required this.onOpenExamManagement,
     required this.onOpenProfile,
     required this.onLogout,
   });
@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
   final List<Course> courses;
   final List<Project> projects;
   final List<ScheduleItem> schedule;
-  final VoidCallback onOpenFocusMode;
+  final VoidCallback onOpenExamManagement;
   final VoidCallback onOpenProfile;
   final VoidCallback onLogout;
 
@@ -145,8 +145,9 @@ class HomeScreen extends StatelessWidget {
                 onPressed: studentTheme.toggle,
               ),
               IconButton(
-                icon: const Icon(LucideIcons.sparkles, color: Colors.amber),
-                onPressed: onOpenFocusMode,
+                tooltip: 'Lịch thi',
+                icon: Icon(LucideIcons.calendar, color: colors.primaryStrong),
+                onPressed: onOpenExamManagement,
               ),
             ],
           ),
@@ -180,7 +181,7 @@ class HomeScreen extends StatelessWidget {
                       Text(
                         l10n.t('student.dashboard.home.gpaTitle'),
                         style: TextStyle(
-                          color: colors.onPrimary.withValues(alpha: 0.85),
+                          color: colors.onGpaGradient.withValues(alpha: 0.85),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
@@ -192,7 +193,7 @@ class HomeScreen extends StatelessWidget {
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
-                          color: colors.onPrimary,
+                          color: colors.onGpaGradient,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -202,7 +203,7 @@ class HomeScreen extends StatelessWidget {
                           arguments: {'label': _gpaLabel(context, gpa)},
                         ),
                         style: TextStyle(
-                          color: colors.onPrimary.withValues(alpha: 0.72),
+                          color: colors.onGpaGradient.withValues(alpha: 0.72),
                           fontSize: 11,
                         ),
                       ),
@@ -228,7 +229,7 @@ class HomeScreen extends StatelessWidget {
                 Container(
                   height: 100,
                   width: 1,
-                  color: colors.onPrimary.withValues(alpha: 0.16),
+                  color: colors.onGpaGradient.withValues(alpha: 0.16),
                   margin: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 CircularPercentIndicator(
@@ -255,38 +256,38 @@ class HomeScreen extends StatelessWidget {
                       ),
                       style: TextStyle(
                         fontSize: 10,
-                        color: colors.onPrimary.withValues(alpha: 0.72),
+                        color: colors.onGpaGradient.withValues(alpha: 0.72),
                       ),
                     ),
                   ),
                   circularStrokeCap: CircularStrokeCap.round,
                   progressColor: const Color(0xFF10B981),
-                  backgroundColor: colors.onPrimary.withValues(alpha: 0.16),
+                  backgroundColor: colors.onGpaGradient.withValues(alpha: 0.16),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           GestureDetector(
-            onTap: onOpenFocusMode,
+            onTap: onOpenExamManagement,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.pink.withValues(alpha: 0.08),
+                color: colors.primarySoft,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.pink.withValues(alpha: 0.15)),
+                border: Border.all(color: colors.border),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.pink.withValues(alpha: 0.15),
+                      color: colors.surfaceAlt,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
-                      LucideIcons.alarmClock,
-                      color: Colors.pinkAccent,
+                      LucideIcons.calendar,
+                      color: Colors.greenAccent,
                       size: 20,
                     ),
                   ),
@@ -296,7 +297,7 @@ class HomeScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.t('student.dashboard.home.focusTitle'),
+                          'Quản lý lịch thi',
                           style: TextStyle(
                             color: colors.text,
                             fontSize: 12,
@@ -305,7 +306,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          l10n.t('student.dashboard.home.focusSubtitle'),
+                          'Thêm, sửa, import AI và nhận nhắc trước 1 ngày thi',
                           style: TextStyle(
                             color: colors.textSubtle,
                             fontSize: 10,
@@ -317,7 +318,7 @@ class HomeScreen extends StatelessWidget {
                   const Icon(
                     Icons.arrow_forward_ios,
                     size: 12,
-                    color: Colors.pinkAccent,
+                    color: Colors.greenAccent,
                   ),
                 ],
               ),
