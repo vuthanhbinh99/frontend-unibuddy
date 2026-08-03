@@ -159,6 +159,7 @@ class StudentThemeColors {
     required this.shadow,
     required this.gpaGradientStart,
     required this.gpaGradientEnd,
+    required this.onGpaGradient,
   });
 
   final Brightness brightness;
@@ -180,6 +181,7 @@ class StudentThemeColors {
   final Color shadow;
   final Color gpaGradientStart;
   final Color gpaGradientEnd;
+  final Color onGpaGradient;
 
   static const dark = StudentThemeColors(
     brightness: Brightness.dark,
@@ -201,6 +203,7 @@ class StudentThemeColors {
     shadow: Color(0x66000000),
     gpaGradientStart: Color(0xFF312E81),
     gpaGradientEnd: Color(0xFF1E1B4B),
+    onGpaGradient: Color(0xFFFFFFFF),
   );
 
   static const light = StudentThemeColors(
@@ -223,6 +226,7 @@ class StudentThemeColors {
     shadow: Color(0x1F1E293B),
     gpaGradientStart: Color(0xFF4F46E5),
     gpaGradientEnd: Color(0xFF0EA5E9),
+    onGpaGradient: Color(0xFFFFFFFF),
   );
 
   bool get isLight => brightness == Brightness.light;
