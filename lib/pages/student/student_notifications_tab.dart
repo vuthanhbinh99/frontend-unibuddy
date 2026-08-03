@@ -137,11 +137,26 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
   }
 
   Future<void> _dismissNotification(StudentNotificationItem item) async {
+    final previousItems = List<StudentNotificationItem>.from(_items);
     setState(() {
       _hiddenIds.add(item.id);
       _items = _items.where((current) => current.id != item.id).toList();
     });
-    await _markAsRead(item);
+
+    try {
+      await widget.studentApi.hideNotification(item.id);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _hiddenIds.remove(item.id);
+        _items = previousItems;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   @override
@@ -160,9 +175,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
             final isLoading =
                 snapshot.connectionState == ConnectionState.waiting &&
                 _items.isEmpty;
-            final unreadCount =
-                snapshot.data?.unreadCount ??
-                _items.where((item) => !item.isRead).length;
+            final unreadCount = _items.where((item) => !item.isRead).length;
 
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(
@@ -270,21 +283,21 @@ class _Header extends StatelessWidget {
         TextButton.icon(
           onPressed: isMarkingAll ? null : onMarkAll,
           icon: isMarkingAll
-              ? const SizedBox(
+              ? SizedBox(
                   width: 14,
                   height: 14,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF89CEFF),
+                      colors.info,
                     ),
                   ),
                 )
-              : const Icon(Icons.done_all, size: 16, color: Color(0xFF89CEFF)),
+              : Icon(Icons.done_all, size: 16, color: colors.info),
           label: Text(
             l10n.t('student.dashboard.notifications.markAll'),
             style: TextStyle(
-              color: Color(0xFF89CEFF),
+              color: colors.info,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -448,7 +461,7 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
-    final style = _categoryStyle(item.category);
+    final style = _categoryStyle(item.category, colors);
     final borderRadius = isOdd
         ? const BorderRadius.only(
             topLeft: Radius.circular(20),
@@ -689,6 +702,7 @@ class _NotificationCategoryStyle {
 
 _NotificationCategoryStyle _categoryStyle(
   StudentNotificationCategory category,
+  StudentThemeColors colors,
 ) {
   switch (category) {
     case StudentNotificationCategory.deadline:
@@ -704,8 +718,11 @@ _NotificationCategoryStyle _categoryStyle(
         icon: Icons.group,
       );
     case StudentNotificationCategory.system:
+      final accent = colors.isLight
+          ? const Color(0xFFC2185B)
+          : const Color(0xFFFFAFD3);
       return _NotificationCategoryStyle(
-        color: const Color(0xFFFFAFD3),
+        color: accent,
         background: const Color(0xFF620040).withValues(alpha: 0.3),
         icon: Icons.settings,
       );
