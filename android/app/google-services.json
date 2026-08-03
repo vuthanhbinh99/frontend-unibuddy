@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "227802375624",
+    "project_id": "unibuddy-137ba",
+    "storage_bucket": "unibuddy-137ba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227802375624:android:3b45f114db094d1f0f8cfd",
+        "android_client_info": {
+          "package_name": "com.example.unibuddy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlIgN__UJXMdmi3cE281kd610RTSuis8g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
