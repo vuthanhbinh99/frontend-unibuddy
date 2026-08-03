@@ -10,6 +10,102 @@ enum StudentFlashcardMemoryLevel {
   final String value;
 }
 
+enum StudentFlashcardResult {
+  correct('DUNG'),
+  wrong('SAI');
+
+  const StudentFlashcardResult(this.value);
+
+  final String value;
+}
+
+enum StudentFlashcardCardType {
+  essay('TU_LUAN'),
+  quiz('TRAC_NGHIEM');
+
+  const StudentFlashcardCardType(this.value);
+
+  final String value;
+
+  static StudentFlashcardCardType fromValue(Object? raw) {
+    final normalized = (raw as String?)?.trim().toUpperCase();
+    return StudentFlashcardCardType.values.firstWhere(
+      (type) => type.value == normalized,
+      orElse: () => StudentFlashcardCardType.essay,
+    );
+  }
+}
+
+class StudentFlashcardQuizOption {
+  const StudentFlashcardQuizOption({required this.id, required this.content});
+
+  final String id;
+  final String content;
+
+  factory StudentFlashcardQuizOption.fromJson(Map<String, dynamic> json) {
+    return StudentFlashcardQuizOption(
+      id: (json['id'] as String? ?? '').trim(),
+      content: json['noiDung'] as String? ?? '',
+    );
+  }
+}
+
+class StudentFlashcardQuizContent {
+  const StudentFlashcardQuizContent({
+    required this.question,
+    required this.options,
+    required this.correctAnswer,
+    required this.explanation,
+  });
+
+  final String question;
+  final List<StudentFlashcardQuizOption> options;
+  final String correctAnswer;
+  final String explanation;
+
+  factory StudentFlashcardQuizContent.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['cacLuaChon'] as List<dynamic>? ?? const [];
+    return StudentFlashcardQuizContent(
+      question: json['cauHoi'] as String? ?? '',
+      options: rawOptions
+          .whereType<Map<String, dynamic>>()
+          .map(StudentFlashcardQuizOption.fromJson)
+          .toList(),
+      correctAnswer: (json['dapAnDung'] as String? ?? '').trim().toUpperCase(),
+      explanation: json['giaiThich'] as String? ?? '',
+    );
+  }
+}
+
+/// Dữ liệu người dùng nhập để tạo/sửa một thẻ trắc nghiệm thủ công.
+class StudentFlashcardQuizDraft {
+  const StudentFlashcardQuizDraft({
+    required this.question,
+    required this.options,
+    required this.correctAnswer,
+    required this.explanation,
+  });
+
+  final String question;
+  final List<StudentFlashcardQuizOption> options;
+  final String correctAnswer;
+  final String explanation;
+
+  Map<String, Object?> toJson() {
+    return {
+      'cauHoi': question.trim(),
+      'cacLuaChon': options
+          .map((option) => {
+                'id': option.id.trim().toUpperCase(),
+                'noiDung': option.content.trim(),
+              })
+          .toList(),
+      'dapAnDung': correctAnswer.trim().toUpperCase(),
+      'giaiThich': explanation.trim(),
+    };
+  }
+}
+
 class StudentFlashcardDeckData {
   const StudentFlashcardDeckData({required this.message, required this.items});
 
@@ -164,8 +260,10 @@ class StudentFlashcardCard {
     required this.id,
     required this.deckId,
     required this.userId,
+    required this.cardType,
     required this.front,
     required this.back,
+    required this.quizContent,
     required this.reviewCount,
     required this.memoryScore,
     required this.lastReviewedAt,
@@ -177,8 +275,10 @@ class StudentFlashcardCard {
   final String id;
   final String deckId;
   final String userId;
+  final StudentFlashcardCardType cardType;
   final String front;
   final String back;
+  final StudentFlashcardQuizContent? quizContent;
   final int reviewCount;
   final double memoryScore;
   final DateTime? lastReviewedAt;
@@ -186,13 +286,22 @@ class StudentFlashcardCard {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
+  bool get isQuiz =>
+      cardType == StudentFlashcardCardType.quiz && quizContent != null;
+
   factory StudentFlashcardCard.fromJson(Map<String, dynamic> json) {
+    final rawBack = json['matSau'];
+    final quizContent = rawBack is Map<String, dynamic>
+        ? StudentFlashcardQuizContent.fromJson(rawBack)
+        : null;
     return StudentFlashcardCard(
       id: json['maFlashcard'] as String? ?? '',
       deckId: json['maBo'] as String? ?? '',
       userId: json['maNguoiDung'] as String? ?? '',
+      cardType: StudentFlashcardCardType.fromValue(json['loaiThe']),
       front: json['matTruoc'] as String? ?? '',
-      back: json['matSau'] as String? ?? '',
+      back: rawBack is String ? rawBack : (quizContent?.explanation ?? ''),
+      quizContent: quizContent,
       reviewCount: _asInt(json['soLanOn']),
       memoryScore: _asDouble(json['diemGhiNho']),
       lastReviewedAt: _asDate(json['thoiGianLanOnCuoi']),
