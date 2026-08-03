@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../models/student_kanban_models.dart';
+import '../../models/student_study_group_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
@@ -28,34 +29,80 @@ class StudentKanbanPage extends StatefulWidget {
 class _StudentKanbanPageState extends State<StudentKanbanPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final TextEditingController _groupIdController = TextEditingController();
   final Map<String, List<StudentKanbanComment>> _sessionComments = {};
 
   StudentKanbanBoardData? _board;
   List<StudentKanbanTask> _tasks = [];
+  List<StudentStudyGroup> _joinedGroups = [];
   String? _activeGroupId;
   String? _errorMessage;
   bool _loading = false;
+  bool _loadingGroups = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    final initialGroupId = widget.initialGroupId?.trim();
-    if (initialGroupId != null && initialGroupId.isNotEmpty) {
-      _activeGroupId = initialGroupId;
-      _groupIdController.text = initialGroupId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadBoard(initialGroupId);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadJoinedGroups(initialGroupId: widget.initialGroupId?.trim());
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _groupIdController.dispose();
     super.dispose();
+  }
+
+  /// Tải danh sách nhóm học tập mà sinh viên đã tham gia (đồng bộ với trang
+  /// Quản lý nhóm). Tự động mở bảng của nhóm phù hợp mà không cần nhập mã.
+  Future<void> _loadJoinedGroups({String? initialGroupId}) async {
+    setState(() {
+      _loadingGroups = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final data = await widget.studentApi.listStudyGroups();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _joinedGroups = data.items;
+        _loadingGroups = false;
+      });
+
+      if (_joinedGroups.isEmpty) {
+        return;
+      }
+
+      // Ưu tiên nhóm được mở trực tiếp, nếu không thì giữ nhóm đang xem hoặc
+      // mặc định về nhóm đầu tiên.
+      final requestedId = initialGroupId != null && initialGroupId.isNotEmpty
+          ? initialGroupId
+          : _activeGroupId;
+      final target = _joinedGroups.firstWhere(
+        (group) => group.id == requestedId,
+        orElse: () => _joinedGroups.first,
+      );
+      await _loadBoard(target.id);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingGroups = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingGroups = false;
+        _errorMessage = 'Không thể tải danh sách nhóm học tập lúc này.';
+      });
+    }
   }
 
   Future<void> _loadBoard([String? groupId]) async {
@@ -69,7 +116,6 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
       _loading = true;
       _errorMessage = null;
       _activeGroupId = targetGroupId;
-      _groupIdController.text = targetGroupId;
     });
 
     try {
@@ -101,60 +147,92 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     }
   }
 
+  /// Mở danh sách nhóm đã tham gia để chọn bảng Kanban cần xem. Nếu chưa có
+  /// nhóm nào, hướng dẫn sinh viên sang trang Quản lý nhóm để tham gia.
   Future<void> _openGroupDialog() async {
+    if (_joinedGroups.isEmpty && !_loadingGroups) {
+      await _loadJoinedGroups(initialGroupId: _activeGroupId);
+    }
+    if (!mounted) {
+      return;
+    }
+
     final colors = StudentThemeScope.colorsOf(context);
-    final result = await showDialog<String>(
+
+    if (_joinedGroups.isEmpty) {
+      _showSnack(
+        'Bạn chưa tham gia nhóm nào. Hãy vào trang Quản lý nhóm để tham gia.',
+      );
+      return;
+    }
+
+    final selectedId = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: colors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Text(
-            'Chọn nhóm học tập',
-            style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
-          ),
-          content: TextField(
-            controller: _groupIdController,
-            autofocus: true,
-            style: TextStyle(color: colors.text),
-            decoration: InputDecoration(
-              hintText: 'Nhập mã nhóm học tập',
-              hintStyle: TextStyle(color: colors.textSubtle, fontSize: 13),
-              filled: true,
-              fillColor: colors.surfaceAlt.withValues(alpha: 0.75),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.border),
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                child: Text(
+                  'Chọn nhóm học tập',
+                  style: TextStyle(
+                    color: colors.text,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.border),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _joinedGroups.length,
+                  itemBuilder: (context, index) {
+                    final group = _joinedGroups[index];
+                    final selected = group.id == _activeGroupId;
+                    return ListTile(
+                      leading: Icon(
+                        Icons.groups_2_outlined,
+                        color: selected
+                            ? colors.primaryStrong
+                            : colors.textMuted,
+                      ),
+                      title: Text(
+                        group.name,
+                        style: TextStyle(
+                          color: colors.text,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        group.courseLabel,
+                        style: TextStyle(color: colors.textMuted, fontSize: 12),
+                      ),
+                      trailing: selected
+                          ? Icon(Icons.check_circle, color: colors.primaryStrong)
+                          : null,
+                      onTap: () => Navigator.pop(context, group.id),
+                    );
+                  },
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: colors.primaryStrong),
-              ),
-            ),
+              const SizedBox(height: 8),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(context, _groupIdController.text.trim()),
-              child: const Text('Tải bảng'),
-            ),
-          ],
         );
       },
     );
 
-    if (result != null && result.trim().isNotEmpty) {
-      await _loadBoard(result);
+    if (selectedId != null && selectedId.isNotEmpty) {
+      await _loadBoard(selectedId);
     }
   }
 
@@ -183,6 +261,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
               description: result.description,
               dueDate: result.dueDate,
               assigneeId: result.assigneeId,
+              assignAllMembers: result.assignAllMembers,
             );
             if (!mounted) {
               return;
@@ -218,8 +297,10 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
               members: _board?.members ?? const [],
               comments: _sessionComments[task.id] ?? const [],
               scrollController: scrollController,
+              canEdit: _board?.myRole == 'TRUONG_NHOM',
               onStatusChanged: (status) => _changeTaskStatus(task, status),
               onComment: (content) => _commentTask(task, content),
+              onEditDue: (dueDate) => _changeTaskDue(task, dueDate),
               onTaskChanged: _replaceTask,
             );
           },
@@ -240,6 +321,23 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     if (mounted) {
       _replaceTask(updated);
       _showSnack('Đã cập nhật trạng thái công việc.');
+    }
+    return updated;
+  }
+
+  Future<StudentKanbanTask> _changeTaskDue(
+    StudentKanbanTask task,
+    DateTime? dueDate,
+  ) async {
+    final updated = await widget.studentApi.updateKanbanTask(
+      taskId: task.id,
+      title: task.title,
+      description: task.description,
+      dueDate: dueDate,
+    );
+    if (mounted) {
+      _replaceTask(updated);
+      _showSnack('Đã cập nhật hạn hoàn thành.');
     }
     return updated;
   }
@@ -321,6 +419,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
           ),
           actions: [
             IconButton(
+              tooltip: 'Đổi nhóm học tập',
               icon: Icon(Icons.group_outlined, color: colors.text),
               onPressed: _openGroupDialog,
             ),
@@ -486,7 +585,14 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
               ),
             ),
             IconButton(
-              onPressed: () => _loadBoard(),
+              onPressed: () {
+                final active = _activeGroupId?.trim();
+                if (active == null || active.isEmpty) {
+                  _loadJoinedGroups(initialGroupId: _activeGroupId);
+                } else {
+                  _loadBoard();
+                }
+              },
               icon: const Icon(Icons.refresh, size: 18),
               color: colors.danger,
               tooltip: 'Tải lại',
@@ -534,7 +640,13 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
   Widget _buildTaskList(StudentKanbanStatus status) {
     final colors = StudentThemeScope.colorsOf(context);
     if (_activeGroupId == null || _activeGroupId!.isEmpty) {
-      return _EmptyKanbanState(onSelectGroup: _openGroupDialog);
+      if (_loadingGroups) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return _EmptyKanbanState(
+        hasGroups: _joinedGroups.isNotEmpty,
+        onSelectGroup: _openGroupDialog,
+      );
     }
 
     final filtered = _tasks.where((task) => task.status == status).toList();
@@ -806,8 +918,10 @@ class _TaskDetailsWidget extends StatefulWidget {
     required this.members,
     required this.comments,
     required this.scrollController,
+    required this.canEdit,
     required this.onStatusChanged,
     required this.onComment,
+    required this.onEditDue,
     required this.onTaskChanged,
   });
 
@@ -815,9 +929,11 @@ class _TaskDetailsWidget extends StatefulWidget {
   final List<StudentKanbanMember> members;
   final List<StudentKanbanComment> comments;
   final ScrollController scrollController;
+  final bool canEdit;
   final Future<StudentKanbanTask> Function(StudentKanbanStatus status)
   onStatusChanged;
   final Future<StudentKanbanComment> Function(String content) onComment;
+  final Future<StudentKanbanTask> Function(DateTime? dueDate) onEditDue;
   final ValueChanged<StudentKanbanTask> onTaskChanged;
 
   @override
@@ -830,6 +946,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
   final TextEditingController _commentController = TextEditingController();
   bool _sendingComment = false;
   bool _changingStatus = false;
+  bool _editingDue = false;
 
   @override
   void initState() {
@@ -878,6 +995,41 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
       }
       setState(() {
         _changingStatus = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _editDue() async {
+    if (_editingDue) {
+      return;
+    }
+    final picked = await pickKanbanDueDateTime(context, _task.dueDate);
+    if (picked == null || !mounted || picked == _task.dueDate) {
+      return;
+    }
+
+    setState(() {
+      _editingDue = true;
+    });
+    try {
+      final updated = await widget.onEditDue(picked);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _task = updated;
+        _editingDue = false;
+      });
+      widget.onTaskChanged(updated);
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _editingDue = false;
       });
       ScaffoldMessenger.of(
         context,
@@ -1040,6 +1192,27 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
                         ),
                       ),
                     ),
+                    if (widget.canEdit)
+                      _editingDue
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : TextButton.icon(
+                              onPressed: _editDue,
+                              icon: const Icon(Icons.edit_calendar, size: 16),
+                              label: const Text('Sửa'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colors.primaryStrong,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                minimumSize: const Size(0, 32),
+                                tapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
                   ],
                 ),
               ),
@@ -1208,9 +1381,11 @@ class _TaskFormSheet extends StatefulWidget {
 }
 
 class _TaskFormSheetState extends State<_TaskFormSheet> {
+  static const String _assignAllValue = '__ALL_MEMBERS__';
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   String? _assigneeId;
+  bool _assignAllMembers = false;
   DateTime? _dueDate;
   bool _saving = false;
 
@@ -1222,31 +1397,13 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   }
 
   Future<void> _pickDueDate() async {
-    final colors = StudentThemeScope.colorsOf(context);
-    final now = DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? now.add(const Duration(days: 1)),
-      firstDate: now.add(const Duration(days: 1)),
-      lastDate: now.add(const Duration(days: 365 * 4)),
-      builder: (context, child) {
-        return Theme(
-          data: buildStudentMaterialTheme(colors).copyWith(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: colors.primaryStrong,
-              brightness: colors.brightness,
-            ).copyWith(primary: colors.primaryStrong, surface: colors.surface),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (date != null) {
-      setState(() {
-        _dueDate = date;
-      });
+    final picked = await pickKanbanDueDateTime(context, _dueDate);
+    if (picked == null || !mounted) {
+      return;
     }
+    setState(() {
+      _dueDate = picked;
+    });
   }
 
   Future<void> _submit() async {
@@ -1267,7 +1424,8 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
           title: title,
           description: _descriptionController.text.trim(),
           dueDate: _dueDate,
-          assigneeId: _assigneeId,
+          assigneeId: _assignAllMembers ? null : _assigneeId,
+          assignAllMembers: _assignAllMembers,
         ),
       );
       if (mounted) {
@@ -1345,7 +1503,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String?>(
-              initialValue: _assigneeId,
+              initialValue: _assignAllMembers ? _assignAllValue : _assigneeId,
               dropdownColor: colors.surface,
               style: TextStyle(color: colors.text),
               decoration: _fieldDecoration('Người phụ trách'),
@@ -1353,6 +1511,10 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                 const DropdownMenuItem<String?>(
                   value: null,
                   child: Text('Chưa gán'),
+                ),
+                const DropdownMenuItem<String?>(
+                  value: _assignAllValue,
+                  child: Text('Tất cả thành viên nhóm'),
                 ),
                 ...widget.members.map(
                   (member) => DropdownMenuItem<String?>(
@@ -1363,16 +1525,29 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
               ],
               onChanged: (value) {
                 setState(() {
+                  if (value == _assignAllValue) {
+                    _assignAllMembers = true;
+                    _assigneeId = null;
+                    return;
+                  }
+                  _assignAllMembers = false;
                   _assigneeId = value;
                 });
               },
             ),
+            if (_assignAllMembers) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Task sẽ gửi thông báo cho toàn bộ thành viên trong nhóm.',
+                style: TextStyle(color: colors.textMuted, fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 12),
             InkWell(
               onTap: _pickDueDate,
               borderRadius: BorderRadius.circular(16),
               child: InputDecorator(
-                decoration: _fieldDecoration('Hạn hoàn thành'),
+                decoration: _fieldDecoration('Hạn hoàn thành (ngày & giờ)'),
                 child: Row(
                   children: [
                     const Icon(
@@ -1453,12 +1628,14 @@ class _KanbanTaskFormResult {
     required this.description,
     required this.dueDate,
     required this.assigneeId,
+    required this.assignAllMembers,
   });
 
   final String title;
   final String? description;
   final DateTime? dueDate;
   final String? assigneeId;
+  final bool assignAllMembers;
 }
 
 class _KanbanTextField extends StatelessWidget {
@@ -1547,8 +1724,12 @@ class _MemberAvatar extends StatelessWidget {
 }
 
 class _EmptyKanbanState extends StatelessWidget {
-  const _EmptyKanbanState({required this.onSelectGroup});
+  const _EmptyKanbanState({
+    required this.hasGroups,
+    required this.onSelectGroup,
+  });
 
+  final bool hasGroups;
   final VoidCallback onSelectGroup;
 
   @override
@@ -1575,7 +1756,7 @@ class _EmptyKanbanState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Chọn nhóm học tập',
+              hasGroups ? 'Chọn nhóm học tập' : 'Chưa có nhóm học tập',
               style: TextStyle(
                 color: colors.text,
                 fontSize: 16,
@@ -1584,7 +1765,9 @@ class _EmptyKanbanState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Chọn một nhóm để xem công việc, thành viên và thảo luận.',
+              hasGroups
+                  ? 'Chọn một nhóm để xem công việc, thành viên và thảo luận.'
+                  : 'Hãy vào trang Quản lý nhóm để tạo hoặc tham gia một nhóm học tập trước.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: colors.textMuted,
@@ -1592,11 +1775,13 @@ class _EmptyKanbanState extends StatelessWidget {
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: onSelectGroup,
-              child: const Text('Nhập mã nhóm'),
-            ),
+            if (hasGroups) ...[
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: onSelectGroup,
+                child: const Text('Chọn nhóm'),
+              ),
+            ],
           ],
         ),
       ),
@@ -1604,11 +1789,68 @@ class _EmptyKanbanState extends StatelessWidget {
   }
 }
 
+/// Mở lần lượt hộp chọn ngày rồi chọn giờ, trả về mốc hạn hoàn thành (giờ local).
+/// Trả về null nếu người dùng huỷ ở bước chọn ngày. Mặc định giờ 23:59 khi chưa có.
+Future<DateTime?> pickKanbanDueDateTime(
+  BuildContext context,
+  DateTime? current,
+) async {
+  final colors = StudentThemeScope.colorsOf(context);
+  final now = DateTime.now();
+  final currentLocal = current?.toLocal();
+  Widget applyTheme(BuildContext context, Widget? child) {
+    return Theme(
+      data: buildStudentMaterialTheme(colors).copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colors.primaryStrong,
+          brightness: colors.brightness,
+        ).copyWith(primary: colors.primaryStrong, surface: colors.surface),
+      ),
+      child: child!,
+    );
+  }
+
+  final date = await showDatePicker(
+    context: context,
+    initialDate: currentLocal ?? now.add(const Duration(days: 1)),
+    firstDate: DateTime(now.year, now.month, now.day),
+    lastDate: now.add(const Duration(days: 365 * 4)),
+    builder: applyTheme,
+  );
+
+  if (date == null || !context.mounted) {
+    return null;
+  }
+
+  final initialTime = currentLocal != null
+      ? TimeOfDay.fromDateTime(currentLocal)
+      : const TimeOfDay(hour: 23, minute: 59);
+  final time = await showTimePicker(
+    context: context,
+    initialTime: initialTime,
+    builder: applyTheme,
+  );
+
+  final chosenTime = time ?? initialTime;
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+    chosenTime.hour,
+    chosenTime.minute,
+  );
+}
+
 String _formatDueDate(DateTime? date) {
   if (date == null) {
     return 'Không hạn';
   }
-  return '${date.day.toString().padLeft(2, '0')} Th${date.month.toString().padLeft(2, '0')}';
+  final local = date.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$day Th$month $hour:$minute';
 }
 
 String _formatRelativeTime(DateTime? date) {
