@@ -29,8 +29,21 @@ class AppLocalizationController extends ChangeNotifier {
 
     final savedLanguageCode = await _preferences.readStudentLanguageCode();
     _languageCode = _normalizeLanguageCode(savedLanguageCode);
-    _bundles['vi'] = await _loadBundle('vi');
-    _bundles['en'] = await _loadBundle('en');
+    try {
+      _bundles['vi'] = await _loadBundle('vi');
+    } catch (e, st) {
+      debugPrint('L10N: failed loading vi bundle: $e\n$st');
+      _bundles['vi'] = {};
+    }
+    try {
+      _bundles['en'] = await _loadBundle('en');
+    } catch (e, st) {
+      debugPrint('L10N: failed loading en bundle: $e\n$st');
+      _bundles['en'] = {};
+    }
+    debugPrint(
+      'L10N: loaded language=$_languageCode vi=${_bundles['vi']?.length ?? 0} en=${_bundles['en']?.length ?? 0}',
+    );
     _loaded = true;
     notifyListeners();
   }
@@ -47,16 +60,63 @@ class AppLocalizationController extends ChangeNotifier {
   }
 
   String t(String key, {Map<String, Object?> arguments = const {}}) {
-    final value = _bundles[_languageCode]?[key] ?? _bundles['vi']?[key] ?? key;
-    if (arguments.isEmpty) {
-      return value;
+    final value = _bundles[_languageCode]?[key] ?? _bundles['vi']?[key];
+    String result;
+    if (value == null) {
+      // avoid showing raw key in UI; provide a friendly fallback
+      final human = _humanizeKey(key);
+      debugPrint(
+        'L10N: missing key "$key" for lang=$_languageCode -> fallback="$human"',
+      );
+      result = human;
+    } else {
+      result = value;
     }
 
-    var result = value;
+    return _interpolate(result, arguments);
+  }
+
+  String tOr(
+    String key, {
+    required String fallbackVi,
+    required String fallbackEn,
+    Map<String, Object?> arguments = const {},
+  }) {
+    final value = _bundles[_languageCode]?[key] ?? _bundles['vi']?[key];
+    final result =
+        value ?? (_languageCode == 'en' ? fallbackEn : fallbackVi);
+    if (value == null) {
+      debugPrint(
+        'L10N: missing key "$key" for lang=$_languageCode -> fallback="$result"',
+      );
+    }
+    return _interpolate(result, arguments);
+  }
+
+  String _interpolate(
+    String template,
+    Map<String, Object?> arguments,
+  ) {
+    var result = template;
+    if (arguments.isEmpty) {
+      return result;
+    }
     arguments.forEach((name, argumentValue) {
       result = result.replaceAll('{$name}', '$argumentValue');
     });
     return result;
+  }
+
+  String _humanizeKey(String key) {
+    final parts = key.split('.');
+    final last = parts.isNotEmpty ? parts.last : key;
+    // replace underscores and camelCase boundaries with spaces
+    var s = last.replaceAll('_', ' ');
+    s = s.replaceAllMapped(RegExp(r'([a-z])([A-Z])'), (m) => '${m[1]} ${m[2]}');
+    s = s.replaceAll(RegExp(r'[^\w\s]'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (s.isEmpty) return '';
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   String _normalizeLanguageCode(String? languageCode) {
@@ -96,7 +156,8 @@ class AppLocalizationController extends ChangeNotifier {
   }
 }
 
-class AppLocalizationScope extends InheritedNotifier<AppLocalizationController> {
+class AppLocalizationScope
+    extends InheritedNotifier<AppLocalizationController> {
   const AppLocalizationScope({
     super.key,
     required AppLocalizationController controller,
@@ -104,8 +165,12 @@ class AppLocalizationScope extends InheritedNotifier<AppLocalizationController> 
   }) : super(notifier: controller);
 
   static AppLocalizationController of(BuildContext context) {
-    final scope = context.dependOnInheritedWidgetOfExactType<AppLocalizationScope>();
-    assert(scope != null, 'AppLocalizationScope is missing above this context.');
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<AppLocalizationScope>();
+    assert(
+      scope != null,
+      'AppLocalizationScope is missing above this context.',
+    );
     return scope!.notifier!;
   }
 }
