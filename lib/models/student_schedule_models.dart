@@ -2,6 +2,7 @@ class StudentScheduleItem {
   const StudentScheduleItem({
     required this.id,
     required this.courseId,
+    required this.semesterId,
     required this.courseCode,
     required this.courseName,
     required this.semesterName,
@@ -15,6 +16,7 @@ class StudentScheduleItem {
 
   final String id;
   final String courseId;
+  final String semesterId;
   final String? courseCode;
   final String courseName;
   final String semesterName;
@@ -33,6 +35,7 @@ class StudentScheduleItem {
     return StudentScheduleItem(
       id: json['maLichHoc'] as String,
       courseId: json['maMonHoc'] as String,
+      semesterId: json['maHocKy'] as String? ?? '',
       courseCode: json['maMon'] as String?,
       courseName: json['tenMon'] as String? ?? '--',
       semesterName: json['tenHocKy'] as String? ?? '--',
@@ -106,11 +109,13 @@ class StudentScheduleImportHeadersData {
           .map((item) => item.toString())
           .toList(),
       rows: rawRows
-          .whereType<Map<String, dynamic>>()
-          .map((row) => Map<String, Object?>.from(row))
+          .whereType<Map>()
+          .map(_stringKeyMap)
           .toList(),
       suggestedMapping: StudentScheduleImportMapping.fromJson(
-        json['suggestedMapping'] as Map<String, dynamic>?,
+        json['suggestedMapping'] is Map
+            ? json['suggestedMapping'] as Map
+            : null,
       ),
       sourceType: json['sourceType'] as String? ?? '--',
     );
@@ -142,10 +147,11 @@ class StudentScheduleImportMapping {
   final String? ngayBatDau;
   final String? ngayKetThuc;
 
-  factory StudentScheduleImportMapping.fromJson(Map<String, dynamic>? json) {
+  factory StudentScheduleImportMapping.fromJson(Map? json) {
     String? value(String key) {
       final raw = json?[key];
-      return raw is String && raw.trim().isNotEmpty ? raw : null;
+      final text = raw?.toString().trim();
+      return text == null || text.isEmpty ? null : text;
     }
 
     return StudentScheduleImportMapping(
@@ -206,16 +212,16 @@ class StudentScheduleImportPreviewData {
 
   factory StudentScheduleImportPreviewData.fromJson(Map<String, dynamic> json) {
     final rawItems = (json['items'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>();
+        .whereType<Map>()
+        .map(_stringKeyMap);
     return StudentScheduleImportPreviewData(
       message:
           json['message'] as String? ?? 'Preview thời khóa biểu thành công',
-      totalRows: (json['totalRows'] as num?)?.toInt() ?? 0,
-      validRows: (json['validRows'] as num?)?.toInt() ?? 0,
-      invalidRows: (json['invalidRows'] as num?)?.toInt() ?? 0,
-      autoCreateCourseRows:
-          (json['autoCreateCourseRows'] as num?)?.toInt() ?? 0,
-      hasOverlap: json['hasOverlap'] as bool? ?? false,
+      totalRows: _intValue(json['totalRows']) ?? 0,
+      validRows: _intValue(json['validRows']) ?? 0,
+      invalidRows: _intValue(json['invalidRows']) ?? 0,
+      autoCreateCourseRows: _intValue(json['autoCreateCourseRows']) ?? 0,
+      hasOverlap: _boolValue(json['hasOverlap']),
       items: rawItems.map(StudentScheduleImportPreviewItem.fromJson).toList(),
     );
   }
@@ -239,14 +245,14 @@ class StudentScheduleImportPreviewItem {
   factory StudentScheduleImportPreviewItem.fromJson(Map<String, dynamic> json) {
     final rawSchedule = json['lichHoc'];
     return StudentScheduleImportPreviewItem(
-      rowIndex: (json['rowIndex'] as num?)?.toInt() ?? 0,
-      isValid: json['hopLe'] as bool? ?? false,
-      hasOverlap: json['trungLich'] as bool? ?? false,
+      rowIndex: _intValue(json['rowIndex']) ?? 0,
+      isValid: _boolValue(json['hopLe']),
+      hasOverlap: _boolValue(json['trungLich']),
       errors: (json['loi'] as List<dynamic>? ?? const [])
           .map((item) => item.toString())
           .toList(),
-      schedule: rawSchedule is Map<String, dynamic>
-          ? StudentScheduleImportCandidate.fromJson(rawSchedule)
+      schedule: rawSchedule is Map
+          ? StudentScheduleImportCandidate.fromJson(_stringKeyMap(rawSchedule))
           : null,
     );
   }
@@ -283,18 +289,18 @@ class StudentScheduleImportCandidate {
 
   factory StudentScheduleImportCandidate.fromJson(Map<String, dynamic> json) {
     return StudentScheduleImportCandidate(
-      rowIndex: (json['rowIndex'] as num?)?.toInt() ?? 0,
-      maMonHoc: json['maMonHoc'] as String?,
-      maMon: json['maMon'] as String?,
-      tenMon: json['tenMon'] as String? ?? '--',
-      soTinChi: (json['soTinChi'] as num?)?.toInt(),
-      thu: (json['thu'] as num?)?.toInt() ?? 2,
-      tietBatDau: (json['tietBatDau'] as num?)?.toInt() ?? 1,
-      soTiet: (json['soTiet'] as num?)?.toInt() ?? 1,
-      phongHoc: json['phongHoc'] as String?,
-      ngayBatDau: json['ngayBatDau'] as String?,
-      ngayKetThuc: json['ngayKetThuc'] as String?,
-      tuDongTaoMonHoc: json['tuDongTaoMonHoc'] as bool? ?? false,
+      rowIndex: _intValue(json['rowIndex']) ?? 0,
+      maMonHoc: _nullableText(json['maMonHoc']),
+      maMon: _nullableText(json['maMon']),
+      tenMon: _nullableText(json['tenMon']) ?? '--',
+      soTinChi: _intValue(json['soTinChi']),
+      thu: _intValue(json['thu']) ?? 2,
+      tietBatDau: _intValue(json['tietBatDau']) ?? 1,
+      soTiet: _intValue(json['soTiet']) ?? 1,
+      phongHoc: _nullableText(json['phongHoc']),
+      ngayBatDau: _nullableText(json['ngayBatDau']),
+      ngayKetThuc: _nullableText(json['ngayKetThuc']),
+      tuDongTaoMonHoc: _boolValue(json['tuDongTaoMonHoc']),
     );
   }
 
@@ -316,6 +322,39 @@ class StudentScheduleImportCandidate {
   }
 }
 
+Map<String, dynamic> _stringKeyMap(Map map) {
+  return map.map((key, value) => MapEntry(key.toString(), value));
+}
+
+String? _nullableText(Object? value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
+}
+
+int? _intValue(Object? value) {
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value.trim());
+  }
+  return null;
+}
+
+bool _boolValue(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  if (value is num) {
+    return value != 0;
+  }
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+  }
+  return false;
+}
+
 class StudentScheduleImportConfirmData {
   const StudentScheduleImportConfirmData({
     required this.message,
@@ -332,9 +371,8 @@ class StudentScheduleImportConfirmData {
       message:
           json['message'] as String? ??
           'Đồng bộ thành công! Thời khóa biểu của bạn đã được cập nhật.',
-      importedCount: (json['importedCount'] as num?)?.toInt() ?? 0,
-      autoCreatedCourseCount:
-          (json['autoCreatedCourseCount'] as num?)?.toInt() ?? 0,
+      importedCount: _intValue(json['importedCount']) ?? 0,
+      autoCreatedCourseCount: _intValue(json['autoCreatedCourseCount']) ?? 0,
     );
   }
 }
