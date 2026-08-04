@@ -486,6 +486,13 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                     initialValue: selectedSemester.id,
                     isExpanded: true,
                     dropdownColor: colors.surface,
+                    iconEnabledColor: colors.textMuted,
+                    iconDisabledColor: colors.textSubtle,
+                    style: TextStyle(
+                      color: colors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                     decoration: _manualInputDecoration(
                       l10n.tOr(
                         'student.dashboard.schedule.importSemesterLabel',
@@ -553,7 +560,13 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.t('common.cancel')),
+                  child: Text(
+                    l10n.t('common.cancel'),
+                    style: TextStyle(
+                      color: colors.primaryStrong,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(
@@ -689,7 +702,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               children: [
                 Text(
                   '${headers.sourceType} • ${headers.rows.length} dòng • ${headers.headers.length} cột',
-                  style: TextStyle(color: colors.textSubtle),
+                  style: TextStyle(
+                    color: colors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 _ImportPreviewStat(
@@ -763,7 +779,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                             'errors': item.errors.join(', '),
                           },
                         ),
-                        style: TextStyle(color: colors.textMuted, fontSize: 12),
+                        style: TextStyle(
+                          color: colors.textMuted,
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
@@ -775,7 +796,13 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(l10n.t('common.cancel')),
+              child: Text(
+                l10n.t('common.cancel'),
+                style: TextStyle(
+                  color: colors.primaryStrong,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(
@@ -785,9 +812,19 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               ),
               child: Text(
                 l10n.t('student.dashboard.schedule.importMappingRefresh'),
+                style: TextStyle(
+                  color: colors.primaryStrong,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.primaryStrong,
+                disabledBackgroundColor: colors.surfaceAlt,
+                foregroundColor: colors.onPrimary,
+                disabledForegroundColor: colors.textMuted,
+              ),
               onPressed: canImport
                   ? () {
                       final selectedMapping = _scheduleMappingFromSelections(
@@ -848,6 +885,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         startPeriod: input.startPeriod,
         periodCount: input.periodCount,
         room: input.room,
+        startDate: input.startDate,
+        endDate: input.endDate,
       );
       await _refreshSchedule();
       await _refreshHome();
@@ -921,9 +960,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         startPeriod: input.startPeriod,
         periodCount: input.periodCount,
         room: input.room,
+        startDate: input.startDate,
+        endDate: input.endDate,
       );
-      await _refreshSchedule();
-      await _refreshHome();
+      unawaited(_refreshSchedule());
+      unawaited(_refreshHome());
 
       if (!mounted) {
         return;
@@ -1049,240 +1090,18 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   }) {
     final l10n = context.l10n;
     final colors = _studentThemeController.colors;
-    final isEditing = initial != null;
-    final formKey = GlobalKey<FormState>();
-    final roomController = TextEditingController(text: initial?.room ?? '');
-    final hasInitialCourse =
-        initial != null &&
-        courses.any((course) => course.id == initial.courseId);
-    var selectedCourseId = hasInitialCourse
-        ? initial.courseId
-        : courses.first.id;
-    var selectedDay = initial?.dayOfWeek ?? 2;
-    var selectedStartPeriod = initial?.startPeriod ?? 1;
-    var selectedPeriodCount = initial?.periodCount ?? 3;
 
     return showDialog<_ManualScheduleInput>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final lastPeriod = selectedStartPeriod + selectedPeriodCount - 1;
-            final periodIsValid = lastPeriod <= 12;
-
-            return AlertDialog(
-              backgroundColor: colors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              title: Row(
-                children: [
-                  Icon(
-                    isEditing ? Icons.edit_outlined : Icons.add_circle_outline,
-                    color: colors.primaryStrong,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.t(
-                      isEditing
-                          ? 'student.dashboard.schedule.editTitle'
-                          : 'student.dashboard.schedule.manualTitle',
-                    ),
-                    style: TextStyle(
-                      color: colors.text,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedCourseId,
-                        dropdownColor: colors.surface,
-                        decoration: _manualInputDecoration(
-                          l10n.t('student.dashboard.schedule.manualCourse'),
-                          colors,
-                        ),
-                        items: courses.map((course) {
-                          return DropdownMenuItem(
-                            value: course.id,
-                            child: Text(
-                              course.code == null
-                                  ? course.name
-                                  : '${course.code} - ${course.name}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => selectedCourseId = value);
-                          }
-                        },
-                        validator: (value) => value == null
-                            ? l10n.t(
-                                'student.dashboard.schedule.manualChooseCourse',
-                              )
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        initialValue: selectedDay,
-                        dropdownColor: colors.surface,
-                        decoration: _manualInputDecoration(
-                          l10n.t('student.dashboard.schedule.manualDay'),
-                          colors,
-                        ),
-                        items: _manualDayOptions(l10n).map((day) {
-                          return DropdownMenuItem(
-                            value: day.value,
-                            child: Text(day.label),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => selectedDay = value);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: selectedStartPeriod,
-                              dropdownColor: colors.surface,
-                              decoration: _manualInputDecoration(
-                                l10n.t(
-                                  'student.dashboard.schedule.manualStartPeriod',
-                                ),
-                                colors,
-                              ),
-                              items: List.generate(12, (index) => index + 1)
-                                  .map(
-                                    (period) => DropdownMenuItem(
-                                      value: period,
-                                      child: Text('$period'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setDialogState(
-                                    () => selectedStartPeriod = value,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              initialValue: selectedPeriodCount,
-                              dropdownColor: colors.surface,
-                              decoration: _manualInputDecoration(
-                                l10n.t(
-                                  'student.dashboard.schedule.manualPeriodCount',
-                                ),
-                                colors,
-                              ),
-                              items: List.generate(12, (index) => index + 1)
-                                  .map(
-                                    (count) => DropdownMenuItem(
-                                      value: count,
-                                      child: Text('$count'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setDialogState(
-                                    () => selectedPeriodCount = value,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (!periodIsValid) ...[
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            l10n.t(
-                              'student.dashboard.schedule.manualPeriodOverflow',
-                            ),
-                            style: const TextStyle(
-                              color: Color(0xFFFF809F),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: roomController,
-                        style: TextStyle(color: colors.text),
-                        decoration: _manualInputDecoration(
-                          l10n.t('student.dashboard.schedule.manualRoom'),
-                          colors,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(l10n.t('common.cancel')),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colors.primaryStrong,
-                    foregroundColor: colors.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: periodIsValid
-                      ? () {
-                          if (formKey.currentState?.validate() != true) {
-                            return;
-                          }
-                          Navigator.of(context).pop(
-                            _ManualScheduleInput(
-                              courseId: selectedCourseId,
-                              dayOfWeek: selectedDay,
-                              startPeriod: selectedStartPeriod,
-                              periodCount: selectedPeriodCount,
-                              room: roomController.text,
-                            ),
-                          );
-                        }
-                      : null,
-                  child: Text(
-                    l10n.t(
-                      isEditing
-                          ? 'student.dashboard.schedule.editSave'
-                          : 'student.dashboard.schedule.manualSave',
-                    ),
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ).whenComplete(roomController.dispose);
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (context) => _ManualScheduleDialog(
+        courses: courses,
+        initial: initial,
+        l10n: l10n,
+        colors: colors,
+      ),
+    );
   }
 
   List<Widget> _buildScreens() {
@@ -1479,6 +1298,8 @@ class _ManualScheduleInput {
     required this.startPeriod,
     required this.periodCount,
     required this.room,
+    required this.startDate,
+    required this.endDate,
   });
 
   final String courseId;
@@ -1486,6 +1307,369 @@ class _ManualScheduleInput {
   final int startPeriod;
   final int periodCount;
   final String room;
+  final String? startDate;
+  final String? endDate;
+}
+
+class _ManualScheduleDialog extends StatefulWidget {
+  const _ManualScheduleDialog({
+    required this.courses,
+    required this.l10n,
+    required this.colors,
+    this.initial,
+  });
+
+  final List<StudentCourseItem> courses;
+  final StudentScheduleItem? initial;
+  final AppLocalizationController l10n;
+  final StudentThemeColors colors;
+
+  @override
+  State<_ManualScheduleDialog> createState() => _ManualScheduleDialogState();
+}
+
+class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _roomController;
+  late final TextEditingController _startDateController;
+  late final TextEditingController _endDateController;
+  late String _selectedCourseId;
+  late int _selectedDay;
+  late int _selectedStartPeriod;
+  late int _selectedPeriodCount;
+
+  bool get _isEditing => widget.initial != null;
+
+  bool get _periodIsValid =>
+      _selectedStartPeriod + _selectedPeriodCount - 1 <= 12;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    final hasInitialCourse =
+        initial != null &&
+        widget.courses.any((course) => course.id == initial.courseId);
+    _selectedCourseId = hasInitialCourse
+        ? initial.courseId
+        : widget.courses.first.id;
+    _selectedDay = initial?.dayOfWeek ?? 2;
+    _selectedStartPeriod = initial?.startPeriod ?? 1;
+    _selectedPeriodCount = initial?.periodCount ?? 3;
+    _roomController = TextEditingController(text: initial?.room ?? '');
+    _startDateController = TextEditingController(
+      text: _dateInputValue(initial?.startDate),
+    );
+    _endDateController = TextEditingController(
+      text: _dateInputValue(initial?.endDate),
+    );
+  }
+
+  @override
+  void dispose() {
+    _roomController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _close([_ManualScheduleInput? input]) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop(input);
+    }
+  }
+
+  void _submit() {
+    if (!_periodIsValid || _formKey.currentState?.validate() != true) {
+      return;
+    }
+
+    unawaited(
+      _close(
+        _ManualScheduleInput(
+          courseId: _selectedCourseId,
+          dayOfWeek: _selectedDay,
+          startPeriod: _selectedStartPeriod,
+          periodCount: _selectedPeriodCount,
+          room: _roomController.text,
+          startDate: _normalizedDateOrNull(_startDateController.text),
+          endDate: _normalizedDateOrNull(_endDateController.text),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    final colors = widget.colors;
+
+    return AlertDialog(
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Row(
+        children: [
+          Icon(
+            _isEditing ? Icons.edit_outlined : Icons.add_circle_outline,
+            color: colors.primaryStrong,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            l10n.t(
+              _isEditing
+                  ? 'student.dashboard.schedule.editTitle'
+                  : 'student.dashboard.schedule.manualTitle',
+            ),
+            style: TextStyle(
+              color: colors.text,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCourseId,
+                dropdownColor: colors.surface,
+                iconEnabledColor: colors.textMuted,
+                iconDisabledColor: colors.textSubtle,
+                isExpanded: true,
+                style: TextStyle(
+                  color: colors.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: _manualInputDecoration(
+                  l10n.t('student.dashboard.schedule.manualCourse'),
+                  colors,
+                ),
+                items: widget.courses.map((course) {
+                  return DropdownMenuItem(
+                    value: course.id,
+                    child: Text(
+                      course.code == null
+                          ? course.name
+                          : '${course.code} - ${course.name}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedCourseId = value);
+                  }
+                },
+                validator: (value) => value == null
+                    ? l10n.t('student.dashboard.schedule.manualChooseCourse')
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                initialValue: _selectedDay,
+                dropdownColor: colors.surface,
+                iconEnabledColor: colors.textMuted,
+                iconDisabledColor: colors.textSubtle,
+                style: TextStyle(
+                  color: colors.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: _manualInputDecoration(
+                  l10n.t('student.dashboard.schedule.manualDay'),
+                  colors,
+                ),
+                items: _manualDayOptions(l10n).map((day) {
+                  return DropdownMenuItem(
+                    value: day.value,
+                    child: Text(day.label),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedDay = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _selectedStartPeriod,
+                      dropdownColor: colors.surface,
+                      iconEnabledColor: colors.textMuted,
+                      iconDisabledColor: colors.textSubtle,
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: _manualInputDecoration(
+                        l10n.t('student.dashboard.schedule.manualStartPeriod'),
+                        colors,
+                      ),
+                      items: List.generate(12, (index) => index + 1)
+                          .map(
+                            (period) => DropdownMenuItem(
+                              value: period,
+                              child: Text('$period'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedStartPeriod = value);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _selectedPeriodCount,
+                      dropdownColor: colors.surface,
+                      iconEnabledColor: colors.textMuted,
+                      iconDisabledColor: colors.textSubtle,
+                      style: TextStyle(
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      decoration: _manualInputDecoration(
+                        l10n.t('student.dashboard.schedule.manualPeriodCount'),
+                        colors,
+                      ),
+                      items: List.generate(12, (index) => index + 1)
+                          .map(
+                            (count) => DropdownMenuItem(
+                              value: count,
+                              child: Text('$count'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedPeriodCount = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (!_periodIsValid) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.t('student.dashboard.schedule.manualPeriodOverflow'),
+                    style: TextStyle(color: colors.danger, fontSize: 12),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _startDateController,
+                      style: TextStyle(color: colors.text),
+                      keyboardType: TextInputType.datetime,
+                      decoration: _manualInputDecoration(
+                        'Ngày bắt đầu',
+                        colors,
+                        hintText: 'YYYY-MM-DD',
+                      ),
+                      validator: (value) =>
+                          _manualScheduleDateValidator(value, 'Ngày bắt đầu'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _endDateController,
+                      style: TextStyle(color: colors.text),
+                      keyboardType: TextInputType.datetime,
+                      decoration: _manualInputDecoration(
+                        'Ngày kết thúc',
+                        colors,
+                        hintText: 'YYYY-MM-DD',
+                      ),
+                      validator: (value) {
+                        final message = _manualScheduleDateValidator(
+                          value,
+                          'Ngày kết thúc',
+                        );
+                        if (message != null) {
+                          return message;
+                        }
+                        final start = _normalizedDateOrNull(
+                          _startDateController.text,
+                        );
+                        final end = _normalizedDateOrNull(value);
+                        if (start != null &&
+                            end != null &&
+                            start.compareTo(end) > 0) {
+                          return 'Ngày kết thúc phải sau ngày bắt đầu';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _roomController,
+                style: TextStyle(color: colors.text),
+                decoration: _manualInputDecoration(
+                  l10n.t('student.dashboard.schedule.manualRoom'),
+                  colors,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => unawaited(_close()),
+          child: Text(
+            l10n.t('common.cancel'),
+            style: TextStyle(
+              color: colors.primaryStrong,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: colors.primaryStrong,
+            foregroundColor: colors.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _periodIsValid ? _submit : null,
+          child: Text(
+            l10n.t(
+              _isEditing
+                  ? 'student.dashboard.schedule.editSave'
+                  : 'student.dashboard.schedule.manualSave',
+            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ScheduleImportSemesterChoice {
@@ -1641,18 +1825,73 @@ List<_ManualDayOption> _manualDayOptions(AppLocalizationController l10n) {
   ];
 }
 
+String _dateInputValue(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.length >= 10) {
+    return trimmed.substring(0, 10);
+  }
+  return trimmed;
+}
+
+String? _normalizedDateOrNull(String? value) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  final parsed = DateTime.tryParse(trimmed);
+  if (parsed == null) {
+    return null;
+  }
+
+  final year = parsed.year.toString().padLeft(4, '0');
+  final month = parsed.month.toString().padLeft(2, '0');
+  final day = parsed.day.toString().padLeft(2, '0');
+  return '$year-$month-$day';
+}
+
+String? _manualScheduleDateValidator(String? value, String label) {
+  final trimmed = value?.trim() ?? '';
+  if (trimmed.isEmpty) {
+    return null;
+  }
+  if (_normalizedDateOrNull(trimmed) == null) {
+    return '$label phải đúng định dạng YYYY-MM-DD';
+  }
+  return null;
+}
+
 InputDecoration _manualInputDecoration(
   String label,
-  StudentThemeColors colors,
-) {
+  StudentThemeColors colors, {
+  String? hintText,
+}) {
   return InputDecoration(
     labelText: label,
-    labelStyle: TextStyle(color: colors.textSubtle, fontSize: 12),
+    hintText: hintText,
+    labelStyle: TextStyle(
+      color: colors.textMuted,
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+    ),
+    floatingLabelStyle: TextStyle(
+      color: colors.primaryStrong,
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+    ),
+    hintStyle: TextStyle(
+      color: colors.isLight ? colors.textMuted : colors.textSubtle,
+      fontWeight: FontWeight.w500,
+    ),
     filled: true,
     fillColor: colors.surfaceAlt,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide.none,
+      borderSide: BorderSide(color: colors.border),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: colors.borderStrong),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
@@ -1685,11 +1924,25 @@ class _ImportMappingSelector extends StatelessWidget {
       initialValue: selectedValue,
       isExpanded: true,
       dropdownColor: colors.surface,
-      iconEnabledColor: colors.textSubtle,
-      style: TextStyle(color: colors.text, fontSize: 13),
+      iconEnabledColor: colors.textMuted,
+      iconDisabledColor: colors.textSubtle,
+      style: TextStyle(
+        color: colors.text,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+      ),
       decoration: InputDecoration(
         labelText: field.label,
-        labelStyle: TextStyle(color: colors.textSubtle, fontSize: 12),
+        labelStyle: TextStyle(
+          color: colors.textMuted,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelStyle: TextStyle(
+          color: colors.primaryStrong,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
         filled: true,
         fillColor: colors.surfaceAlt,
         contentPadding: const EdgeInsets.symmetric(
@@ -1715,12 +1968,17 @@ class _ImportMappingSelector extends StatelessWidget {
           child: Text(
             l10n.t('student.dashboard.schedule.importMappingUnmapped'),
             overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.textMuted),
           ),
         ),
         for (final header in headers)
           DropdownMenuItem(
             value: header,
-            child: Text(header, overflow: TextOverflow.ellipsis),
+            child: Text(
+              header,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: colors.text),
+            ),
           ),
       ],
       onChanged: (value) {
@@ -1762,7 +2020,11 @@ class _ImportPreviewStat extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(color: colors.textMuted, fontSize: 12),
+              style: TextStyle(
+                color: colors.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
