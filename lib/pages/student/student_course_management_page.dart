@@ -629,12 +629,13 @@ class _StudentCourseManagementPageState
     final endYearController = TextEditingController(
       text: _yearFromSemesterValue(semester?.endDate),
     );
+    final colors = StudentThemeScope.colorsOf(context);
 
     try {
       final draft = await showDialog<_SemesterDraft>(
         context: context,
+        barrierDismissible: false,
         builder: (context) {
-          final colors = StudentThemeScope.colorsOf(context);
           return AlertDialog(
             backgroundColor: colors.surface,
             title: Text(
@@ -701,22 +702,34 @@ class _StudentCourseManagementPageState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () async {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  await Future<void>.delayed(
+                    const Duration(milliseconds: 120),
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
                 child: const Text('Hủy'),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (formKey.currentState?.validate() != true) {
                     return;
                   }
-                  Navigator.pop(
-                    context,
-                    _SemesterDraft(
-                      name: nameController.text.trim(),
-                      startYear: startYearController.text.trim(),
-                      endYear: endYearController.text.trim(),
-                    ),
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  final draft = _SemesterDraft(
+                    name: nameController.text.trim(),
+                    startYear: startYearController.text.trim(),
+                    endYear: endYearController.text.trim(),
                   );
+                  await Future<void>.delayed(
+                    const Duration(milliseconds: 120),
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context, draft);
+                  }
                 },
                 child: Text(isEditing ? 'Lưu thay đổi' : 'Lưu học kỳ'),
               ),
@@ -1128,7 +1141,7 @@ class _GpaDashboard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        'Mẫu ĐH Việt Nam',
+                        'Theo quy chế trường',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
