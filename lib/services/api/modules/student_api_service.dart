@@ -191,7 +191,7 @@ class StudentApiService {
     return _scheduleFromMutation(data);
   }
 
-  Future<StudentScheduleItem> updateSchedule({
+  Future<void> updateSchedule({
     required String scheduleId,
     required String courseId,
     required int dayOfWeek,
@@ -202,7 +202,7 @@ class StudentApiService {
     String? endDate,
   }) async {
     final normalizedRoom = room?.trim();
-    final data = await _apiClient.put(
+    await _apiClient.put(
       '/schedules/${Uri.encodeComponent(scheduleId)}',
       body: {
         'maMonHoc': courseId,
@@ -216,7 +216,6 @@ class StudentApiService {
         'ngayKetThuc': endDate,
       },
     );
-    return _scheduleFromMutation(data);
   }
 
   Future<void> deleteSchedule({required String scheduleId}) async {
@@ -725,6 +724,16 @@ class StudentApiService {
   Future<void> deleteStorageDocument(String documentId) async {
     await _apiClient.delete(
       '/student/documents/${Uri.encodeComponent(documentId)}',
+    );
+  }
+
+  Future<void> updateStorageDocumentVisibility({
+    required String documentId,
+    required StudentStorageVisibility visibility,
+  }) async {
+    await _apiClient.patch(
+      '/student/documents/${Uri.encodeComponent(documentId)}/visibility',
+      body: {'cheDoHienThi': visibility.value},
     );
   }
 
