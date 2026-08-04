@@ -35,9 +35,11 @@ class _AdminAcademicRulesPageState extends State<AdminAcademicRulesPage> {
   }
 
   Future<void> _refresh() async {
-    final next = widget.api.getAcademicRules(widget.schoolCode);
-    setState(() => _future = next);
-    await next;
+    final rules = await widget.api.getAcademicRules(widget.schoolCode);
+    if (!mounted) {
+      return;
+    }
+    setState(() => _future = Future.value(rules));
   }
 
   @override
@@ -97,14 +99,12 @@ class _AdminAcademicRulesPageState extends State<AdminAcademicRulesPage> {
                     api: widget.api,
                     schoolCode: widget.schoolCode,
                     initial: rules.scoreScale,
-                    onSaved: _refresh,
                   ),
                   const SizedBox(height: 20),
                   _AcademicStandingSection(
                     api: widget.api,
                     schoolCode: widget.schoolCode,
                     initial: rules.academicStandings,
-                    onSaved: _refresh,
                   ),
                 ],
               ),
@@ -132,13 +132,11 @@ class _ScoreScaleSection extends StatefulWidget {
     required this.api,
     required this.schoolCode,
     required this.initial,
-    required this.onSaved,
   });
 
   final AdminApiService api;
   final String schoolCode;
   final List<AdminScoreScaleLevel> initial;
-  final Future<void> Function() onSaved;
 
   @override
   State<_ScoreScaleSection> createState() => _ScoreScaleSectionState();
@@ -197,7 +195,6 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
       if (!mounted) {
         return;
       }
-      await widget.onSaved();
       _showMessage('Đã lưu thang điểm.');
     } on ApiException catch (error) {
       _showError(error.message);
@@ -362,13 +359,11 @@ class _AcademicStandingSection extends StatefulWidget {
     required this.api,
     required this.schoolCode,
     required this.initial,
-    required this.onSaved,
   });
 
   final AdminApiService api;
   final String schoolCode;
   final List<AdminAcademicStanding> initial;
-  final Future<void> Function() onSaved;
 
   @override
   State<_AcademicStandingSection> createState() =>
@@ -428,7 +423,6 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
       if (!mounted) {
         return;
       }
-      await widget.onSaved();
       _showMessage('Đã lưu quy chế học lực.');
     } on ApiException catch (error) {
       _showError(error.message);
