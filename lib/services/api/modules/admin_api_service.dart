@@ -44,28 +44,26 @@ class AdminApiService {
     return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<AdminAcademicRules> updateScoreScale({
+  Future<void> updateScoreScale({
     required String code,
     required List<AdminScoreScaleLevel> levels,
   }) async {
-    final data = await _apiClient.put(
+    await _apiClient.put(
       '/admin/schools/${Uri.encodeComponent(code)}/academic-rules/score-scale',
       body: {'mucThangDiem': levels.map((level) => level.toJson()).toList()},
     );
-    return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<AdminAcademicRules> updateAcademicStandings({
+  Future<void> updateAcademicStandings({
     required String code,
     required List<AdminAcademicStanding> standings,
   }) async {
-    final data = await _apiClient.put(
+    await _apiClient.put(
       '/admin/schools/${Uri.encodeComponent(code)}/academic-rules/academic-standing',
       body: {
         'quyCheHocLuc': standings.map((standing) => standing.toJson()).toList(),
       },
     );
-    return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
   }
 
   Future<List<AdminDocumentReport>> listReports({
