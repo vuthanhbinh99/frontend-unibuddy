@@ -572,8 +572,8 @@ class _NotificationCard extends StatelessWidget {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFC0C1FF),
+                      decoration: BoxDecoration(
+                        color: colors.primaryStrong,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -706,15 +706,25 @@ _NotificationCategoryStyle _categoryStyle(
 ) {
   switch (category) {
     case StudentNotificationCategory.deadline:
+      final accent = colors.isLight
+          ? const Color(0xFFB3261E)
+          : const Color(0xFFFFB4AB);
       return _NotificationCategoryStyle(
-        color: const Color(0xFFFFB4AB),
-        background: const Color(0xFF690005).withValues(alpha: 0.3),
+        color: accent,
+        background: colors.isLight
+            ? const Color(0xFFFFDAD6)
+            : const Color(0xFF690005).withValues(alpha: 0.3),
         icon: Icons.alarm,
       );
     case StudentNotificationCategory.group:
+      final accent = colors.isLight
+          ? const Color(0xFF0369A1)
+          : const Color(0xFF89CEFF);
       return _NotificationCategoryStyle(
-        color: const Color(0xFF89CEFF),
-        background: const Color(0xFF00344D).withValues(alpha: 0.3),
+        color: accent,
+        background: colors.isLight
+            ? const Color(0xFFD3E8FF)
+            : const Color(0xFF00344D).withValues(alpha: 0.3),
         icon: Icons.group,
       );
     case StudentNotificationCategory.system:
@@ -723,7 +733,9 @@ _NotificationCategoryStyle _categoryStyle(
           : const Color(0xFFFFAFD3);
       return _NotificationCategoryStyle(
         color: accent,
-        background: const Color(0xFF620040).withValues(alpha: 0.3),
+        background: colors.isLight
+            ? const Color(0xFFFCE4EC)
+            : const Color(0xFF620040).withValues(alpha: 0.3),
         icon: Icons.settings,
       );
   }
