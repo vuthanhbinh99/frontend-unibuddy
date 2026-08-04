@@ -861,6 +861,13 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
                       ),
                       const SizedBox(width: 10),
                       IconButton.filledTonal(
+                        onPressed: () => _changeVisibility(file),
+                        icon: const Icon(Icons.visibility_outlined),
+                        color: colors.primaryStrong,
+                        tooltip: 'Đổi chế độ hiển thị',
+                      ),
+                      const SizedBox(width: 10),
+                      IconButton.filledTonal(
                         onPressed: () => _reportDocument(file),
                         icon: const Icon(Icons.flag_outlined),
                         color: const Color(0xFFF2B84B),
@@ -881,6 +888,36 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
         );
       },
     );
+  }
+
+  Future<void> _changeVisibility(StudentStorageFile file) async {
+    final selected = await showDialog<StudentStorageVisibility>(
+      context: context,
+      builder: (context) => _DocumentVisibilityDialog(
+        currentVisibility: file.visibility,
+      ),
+    );
+
+    if (selected == null || selected == file.visibility) {
+      return;
+    }
+
+    try {
+      await widget.studentApi.updateStorageDocumentVisibility(
+        documentId: file.id,
+        visibility: selected,
+      );
+      if (!mounted) {
+        return;
+      }
+      Navigator.pop(context);
+      _showSnack('Đã cập nhật chế độ hiển thị tài liệu.');
+      await _loadData(silent: true);
+    } on ApiException catch (error) {
+      if (mounted) {
+        _showSnack(error.message);
+      }
+    }
   }
 
   Future<void> _confirmDelete(StudentStorageFile file) async {
@@ -928,65 +965,12 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
   }
 
   Future<void> _reportDocument(StudentStorageFile file) async {
-    final colors = StudentThemeScope.colorsOf(context);
-    final controller = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('Báo cáo tài liệu', style: TextStyle(color: colors.text)),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Mô tả lý do báo cáo "${file.name}" để quản trị viên xem xét.',
-                style: TextStyle(color: colors.textMuted, fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: controller,
-                maxLines: 4,
-                maxLength: 1000,
-                autofocus: true,
-                style: TextStyle(color: colors.text),
-                decoration: InputDecoration(
-                  hintText: 'Ví dụ: Tài liệu vi phạm bản quyền, nội dung sai...',
-                  hintStyle: TextStyle(color: colors.textMuted),
-                ),
-                validator: (value) {
-                  if ((value ?? '').trim().length < 10) {
-                    return 'Vui lòng nhập lý do (tối thiểu 10 ký tự).';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() ?? false) {
-                Navigator.pop(context, controller.text.trim());
-              }
-            },
-            child: const Text('Gửi báo cáo'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      useRootNavigator: true,
+      builder: (_) => _ReportDocumentDialog(fileName: file.name),
     );
-
-    controller.dispose();
 
     if (reason == null) {
       return;
@@ -1051,6 +1035,176 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+}
+
+class _DocumentVisibilityDialog extends StatefulWidget {
+  const _DocumentVisibilityDialog({required this.currentVisibility});
+
+  final StudentStorageVisibility currentVisibility;
+
+  @override
+  State<_DocumentVisibilityDialog> createState() =>
+      _DocumentVisibilityDialogState();
+}
+
+class _DocumentVisibilityDialogState extends State<_DocumentVisibilityDialog> {
+  late StudentStorageVisibility _selectedVisibility;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedVisibility = widget.currentVisibility;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return AlertDialog(
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      title: Text(
+        'Chế độ hiển thị',
+        style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: StudentStorageVisibility.values.map((visibility) {
+          return RadioListTile<StudentStorageVisibility>(
+            value: visibility,
+            groupValue: _selectedVisibility,
+            activeColor: colors.primaryStrong,
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              visibility.label,
+              style: TextStyle(color: colors.text, fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              _visibilityDescription(visibility),
+              style: TextStyle(color: colors.textMuted, fontSize: 12),
+            ),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedVisibility = value);
+              }
+            },
+          );
+        }).toList(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _selectedVisibility),
+          child: const Text('Lưu'),
+        ),
+      ],
+    );
+  }
+
+  String _visibilityDescription(StudentStorageVisibility visibility) {
+    return switch (visibility) {
+      StudentStorageVisibility.public =>
+        'Sinh viên cùng học phần có thể nhìn thấy.',
+      StudentStorageVisibility.private => 'Chỉ bạn nhìn thấy trong kho lưu trữ.',
+      StudentStorageVisibility.group =>
+        'Chia sẻ theo nhóm học tập khi tài liệu gắn với nhóm.',
+    };
+  }
+}
+
+class _ReportDocumentDialog extends StatefulWidget {
+  const _ReportDocumentDialog({required this.fileName});
+
+  final String fileName;
+
+  @override
+  State<_ReportDocumentDialog> createState() => _ReportDocumentDialogState();
+}
+
+class _ReportDocumentDialogState extends State<_ReportDocumentDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _controller = TextEditingController();
+  bool _closing = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _close([String? reason]) async {
+    if (_closing) {
+      return;
+    }
+
+    _closing = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context, rootNavigator: true).pop(reason);
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    await _close(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        backgroundColor: colors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Báo cáo tài liệu', style: TextStyle(color: colors.text)),
+        content: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mô tả lý do báo cáo "${widget.fileName}" để quản trị viên xem xét.',
+                style: TextStyle(color: colors.textMuted, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _controller,
+                maxLines: 4,
+                maxLength: 1000,
+                autofocus: true,
+                style: TextStyle(color: colors.text),
+                decoration: InputDecoration(
+                  hintText: 'Ví dụ: Tài liệu vi phạm bản quyền, nội dung sai...',
+                  hintStyle: TextStyle(color: colors.textMuted),
+                ),
+                validator: (value) {
+                  if ((value ?? '').trim().length < 10) {
+                    return 'Vui lòng nhập lý do (tối thiểu 10 ký tự).';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => _close(), child: const Text('Hủy')),
+          ElevatedButton(onPressed: _submit, child: const Text('Gửi báo cáo')),
+        ],
+      ),
     );
   }
 }
@@ -1595,6 +1749,7 @@ class _AiSummaryResultCard extends StatelessWidget {
     final suggestions = (result['deXuatOnTap'] as List<dynamic>? ?? const [])
         .map((item) => item.toString())
         .toList();
+    final usedLocalFallback = result['usedLocalFallback'] == true;
 
     return Container(
       width: double.infinity,
@@ -1615,6 +1770,29 @@ class _AiSummaryResultCard extends StatelessWidget {
               fontSize: 14,
             ),
           ),
+          if (usedLocalFallback) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.warning.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colors.warning.withValues(alpha: 0.34),
+                ),
+              ),
+              child: Text(
+                'Dịch vụ AI đang bận, hệ thống đã tạo tóm tắt dự phòng từ nội dung bạn cung cấp.',
+                style: TextStyle(
+                  color: colors.text,
+                  fontSize: 12,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(summary, style: TextStyle(color: colors.text, height: 1.4)),
           if (keyPoints.isNotEmpty) ...[
