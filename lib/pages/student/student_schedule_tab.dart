@@ -53,6 +53,22 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
   DateTime? _selectedWeekStart;
   String? _selectedSemester;
 
+  Future<void> _runScheduleAction(
+    Future<void> Function() action,
+    String fallbackMessage,
+  ) async {
+    try {
+      await action();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(fallbackMessage)));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -146,7 +162,10 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
             tooltip: l10n.t('student.dashboard.schedule.autoImport'),
             onPressed: widget.isImportingSchedule
                 ? null
-                : widget.onImportSchedule,
+                : () => _runScheduleAction(
+                    widget.onImportSchedule,
+                    l10n.t('student.dashboard.schedule.importError'),
+                  ),
           ),
         ],
       ),
@@ -155,7 +174,10 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
         backgroundColor: colors.primaryStrong,
         onPressed: widget.isSavingManualSchedule
             ? null
-            : widget.onAddScheduleManually,
+            : () => _runScheduleAction(
+                widget.onAddScheduleManually,
+                l10n.t('student.dashboard.schedule.manualError'),
+              ),
         child: widget.isSavingManualSchedule
             ? SizedBox(
                 width: 22,
@@ -271,6 +293,14 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
                   ? _ScheduleListView(
                       items: listItems,
                       data: widget.data,
+                      onEdit: (item) => _runScheduleAction(
+                        () => widget.onEditSchedule(item),
+                        l10n.t('student.dashboard.schedule.editError'),
+                      ),
+                      onDelete: (item) => _runScheduleAction(
+                        () => widget.onDeleteSchedule(item),
+                        l10n.t('student.dashboard.schedule.deleteError'),
+                      ),
                     )
                   : weekItems.isEmpty
                   ? _EmptySchedule(message: _emptyMessage(l10n, widget.data))
@@ -282,9 +312,14 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
                         return _ScheduleCard(
                           item: weekItems[index],
                           isEven: index.isEven,
-                          onEdit: () => widget.onEditSchedule(weekItems[index]),
-                          onDelete: () =>
-                              widget.onDeleteSchedule(weekItems[index]),
+                          onEdit: () => _runScheduleAction(
+                            () => widget.onEditSchedule(weekItems[index]),
+                            l10n.t('student.dashboard.schedule.editError'),
+                          ),
+                          onDelete: () => _runScheduleAction(
+                            () => widget.onDeleteSchedule(weekItems[index]),
+                            l10n.t('student.dashboard.schedule.deleteError'),
+                          ),
                         );
                       },
                     ),
@@ -708,10 +743,14 @@ class _ScheduleListView extends StatelessWidget {
   const _ScheduleListView({
     required this.items,
     required this.data,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final List<StudentScheduleItem> items;
   final StudentScheduleData data;
+  final ValueChanged<StudentScheduleItem> onEdit;
+  final ValueChanged<StudentScheduleItem> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -740,6 +779,8 @@ class _ScheduleListView extends StatelessWidget {
         return _ScheduleCourseGroup(
           items: groupItems,
           isEven: index.isEven,
+          onEdit: onEdit,
+          onDelete: onDelete,
         );
       },
     );
@@ -750,10 +791,14 @@ class _ScheduleCourseGroup extends StatelessWidget {
   const _ScheduleCourseGroup({
     required this.items,
     required this.isEven,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final List<StudentScheduleItem> items;
   final bool isEven;
+  final ValueChanged<StudentScheduleItem> onEdit;
+  final ValueChanged<StudentScheduleItem> onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -830,6 +875,126 @@ class _ScheduleCourseGroup extends StatelessWidget {
           _ScheduleMeta(
             icon: Icons.date_range_rounded,
             text: _formatCourseDateRange(l10n, items),
+          ),
+          const SizedBox(height: 12),
+          ...items.map(
+            (item) => _ScheduleCourseGroupSession(
+              item: item,
+              onEdit: () => onEdit(item),
+              onDelete: () => onDelete(item),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleCourseGroupSession extends StatelessWidget {
+  const _ScheduleCourseGroupSession({
+    required this.item,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final StudentScheduleItem item;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+    final l10n = context.l10n;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.surfaceAlt.withValues(alpha: colors.isLight ? 0.65 : 0.7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _ScheduleMeta(
+                  icon: Icons.calendar_today_rounded,
+                  text: _weekdayLabel(l10n, item.dayOfWeek),
+                ),
+                _ScheduleMeta(
+                  icon: Icons.schedule_rounded,
+                  text: l10n.t(
+                    'student.dashboard.schedule.periodRange',
+                    arguments: {
+                      'start': item.startPeriod,
+                      'end': item.endPeriod,
+                    },
+                  ),
+                ),
+                _ScheduleMeta(
+                  icon: Icons.room_rounded,
+                  text:
+                      item.room ??
+                      l10n.t('student.dashboard.schedule.roomUnknown'),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<_ScheduleCardAction>(
+            tooltip: l10n.t('student.dashboard.schedule.cardActions'),
+            icon: Icon(Icons.more_vert, size: 20, color: colors.textMuted),
+            padding: EdgeInsets.zero,
+            color: colors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            onSelected: (action) {
+              switch (action) {
+                case _ScheduleCardAction.edit:
+                  onEdit();
+                  break;
+                case _ScheduleCardAction.delete:
+                  onDelete();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<_ScheduleCardAction>(
+                value: _ScheduleCardAction.edit,
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 18, color: colors.text),
+                    const SizedBox(width: 10),
+                    Text(
+                      l10n.t('student.dashboard.schedule.edit'),
+                      style: TextStyle(color: colors.text),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<_ScheduleCardAction>(
+                value: _ScheduleCardAction.delete,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: Color(0xFFFF5F85),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      l10n.t('student.dashboard.schedule.delete'),
+                      style: const TextStyle(color: Color(0xFFFF5F85)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1248,6 +1413,15 @@ List<_DayOption> _dayOptions(AppLocalizationController l10n) {
     _DayOption(value: 7, label: l10n.t('student.dashboard.schedule.day.sat')),
     _DayOption(value: 8, label: l10n.t('student.dashboard.schedule.day.sun')),
   ];
+}
+
+String _weekdayLabel(AppLocalizationController l10n, int dayOfWeek) {
+  for (final day in _dayOptions(l10n)) {
+    if (day.value == dayOfWeek) {
+      return day.label;
+    }
+  }
+  return dayOfWeek.toString();
 }
 
 int _initialDay() {
