@@ -9,6 +9,7 @@ import '../../models/student_storage_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
+import 'widgets/student_inline_message.dart';
 import 'widgets/student_notification_dropdown.dart';
 
 class StudentStoragePage extends StatefulWidget {
@@ -1228,6 +1229,7 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
   late final TextEditingController _titleController;
   late String _courseId;
   StudentStorageVisibility _visibility = StudentStorageVisibility.public;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -1281,6 +1283,10 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
               '${widget.fileName} • ${formatStudentStorageBytes(widget.sizeBytes)}',
               style: TextStyle(color: colors.textMuted, fontSize: 12),
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
             const SizedBox(height: 18),
             _StorageTextField(
               controller: _titleController,
@@ -1360,12 +1366,9 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
     final title = _titleController.text.trim();
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nhập tên tài liệu hợp lệ.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Nhập tên tài liệu hợp lệ.';
+      });
       return;
     }
 
