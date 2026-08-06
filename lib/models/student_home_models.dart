@@ -99,6 +99,7 @@ class StudentHomeData {
     required catalog.StudentCourseData courseData,
     required schedule_model.StudentScheduleData scheduleData,
     required StudentGradeTranscriptData gradeData,
+    List<Project> projects = const [],
   }) {
     final totalCredits =
         gradeData.summary.calculatedCredits +
@@ -169,7 +170,7 @@ class StudentHomeData {
             ),
           )
           .toList(),
-      projects: const [],
+      projects: projects,
       schedule: todaySchedule,
     );
   }
