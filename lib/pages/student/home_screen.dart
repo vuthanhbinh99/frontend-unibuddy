@@ -63,6 +63,8 @@ class HomeScreen extends StatelessWidget {
   Color _projectColor(String name) {
     if (name == 'rose') return const Color(0xFFF43F5E);
     if (name == 'sky') return const Color(0xFF0EA5E9);
+    if (name == 'emerald') return const Color(0xFF10B981);
+    if (name == 'indigo') return const Color(0xFF4F46E5);
     return Colors.indigo;
   }
 
