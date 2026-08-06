@@ -172,6 +172,7 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
 
   Future<void> _save() async {
     final levels = <AdminScoreScaleLevel>[];
+
     for (final row in _rows) {
       final parsed = row.toModel();
       if (parsed == null) {
@@ -183,6 +184,12 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
 
     if (levels.isEmpty) {
       _showError('Cần ít nhất một mức thang điểm.');
+      return;
+    }
+
+    final validationError = _validateScoreScale(levels);
+    if (validationError != null) {
+      _showError(validationError);
       return;
     }
 
@@ -400,6 +407,7 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
 
   Future<void> _save() async {
     final standings = <AdminAcademicStanding>[];
+
     for (final row in _rows) {
       final parsed = row.toModel();
       if (parsed == null) {
@@ -411,6 +419,12 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
 
     if (standings.isEmpty) {
       _showError('Cần ít nhất một mức quy chế học lực.');
+      return;
+    }
+
+    final validationError = _validateAcademicStandings(standings);
+    if (validationError != null) {
+      _showError(validationError);
       return;
     }
 
@@ -757,4 +771,122 @@ String _fmt(double value) {
     return value.toInt().toString();
   }
   return value.toString();
+}
+
+const double _academicRuleTolerance = 0.001;
+
+bool _nearlyEqual(double a, double b) {
+  return (a - b).abs() <= _academicRuleTolerance;
+}
+
+String? _validateScoreScale(List<AdminScoreScaleLevel> levels) {
+  final sorted = levels.asMap().entries.toList()
+    ..sort((a, b) => a.value.diemTu.compareTo(b.value.diemTu));
+  final usedLetters = <String>{};
+
+  for (var index = 0; index < sorted.length; index++) {
+    final entry = sorted[index];
+    final level = entry.value;
+    final rowNumber = entry.key + 1;
+    final letter = level.diemChu.trim().toUpperCase();
+
+    if (level.diemTu < 0 || level.diemDen > 10) {
+      return 'Dòng $rowNumber: điểm phải nằm trong khoảng 0 đến 10.';
+    }
+
+    if (level.diemTu >= level.diemDen) {
+      return 'Dòng $rowNumber: Điểm từ phải nhỏ hơn Điểm đến.';
+    }
+
+    if (letter.isEmpty) {
+      return 'Dòng $rowNumber: Điểm chữ không được để trống.';
+    }
+
+    if (usedLetters.contains(letter)) {
+      return 'Dòng $rowNumber: Điểm chữ $letter bị trùng.';
+    }
+    usedLetters.add(letter);
+
+    if (level.he4 < 0 || level.he4 > 4) {
+      return 'Dòng $rowNumber: Hệ 4 phải nằm trong khoảng 0 đến 4.';
+    }
+
+    if (index == 0) {
+      if (!_nearlyEqual(level.diemTu, 0)) {
+        return 'Thang điểm phải bắt đầu từ 0.';
+      }
+      continue;
+    }
+
+    final previous = sorted[index - 1].value;
+    if (level.diemTu <= previous.diemDen) {
+      return 'Dòng $rowNumber: khoảng điểm bị chồng lấn với dòng trước.';
+    }
+
+    if (!_nearlyEqual(level.diemTu, previous.diemDen + 0.01)) {
+      return 'Dòng $rowNumber: thang điểm phải phủ liên tục, không được hở khoảng.';
+    }
+
+    if (level.he4 < previous.he4) {
+      return 'Dòng $rowNumber: Hệ 4 phải tăng dần theo điểm.';
+    }
+  }
+
+  if (!_nearlyEqual(sorted.last.value.diemDen, 10)) {
+    return 'Thang điểm phải kết thúc ở 10.';
+  }
+
+  return null;
+}
+
+String? _validateAcademicStandings(List<AdminAcademicStanding> standings) {
+  final sorted = standings.asMap().entries.toList()
+    ..sort((a, b) => a.value.gpaTu.compareTo(b.value.gpaTu));
+  final usedNames = <String>{};
+
+  for (var index = 0; index < sorted.length; index++) {
+    final entry = sorted[index];
+    final standing = entry.value;
+    final rowNumber = entry.key + 1;
+    final name = standing.xepLoai.trim().toLowerCase();
+
+    if (standing.gpaTu < 0 || standing.gpaDen > 4) {
+      return 'Dòng $rowNumber: GPA phải nằm trong khoảng 0 đến 4.';
+    }
+
+    if (standing.gpaTu >= standing.gpaDen) {
+      return 'Dòng $rowNumber: GPA từ phải nhỏ hơn GPA đến.';
+    }
+
+    if (name.isEmpty) {
+      return 'Dòng $rowNumber: Xếp loại không được để trống.';
+    }
+
+    if (usedNames.contains(name)) {
+      return 'Dòng $rowNumber: Xếp loại ${standing.xepLoai} bị trùng.';
+    }
+    usedNames.add(name);
+
+    if (index == 0) {
+      if (!_nearlyEqual(standing.gpaTu, 0)) {
+        return 'Quy chế học lực phải bắt đầu từ GPA 0.';
+      }
+      continue;
+    }
+
+    final previous = sorted[index - 1].value;
+    if (standing.gpaTu <= previous.gpaDen) {
+      return 'Dòng $rowNumber: khoảng GPA bị chồng lấn với dòng trước.';
+    }
+
+    if (!_nearlyEqual(standing.gpaTu, previous.gpaDen + 0.01)) {
+      return 'Dòng $rowNumber: quy chế học lực phải phủ liên tục, không được hở khoảng.';
+    }
+  }
+
+  if (!_nearlyEqual(sorted.last.value.gpaDen, 4)) {
+    return 'Quy chế học lực phải kết thúc ở GPA 4.';
+  }
+
+  return null;
 }
