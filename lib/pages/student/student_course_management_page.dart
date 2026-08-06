@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/student_course_models.dart';
 import '../../models/student_grade_models.dart';
@@ -543,15 +544,68 @@ class _StudentCourseManagementPageState
   }
 
   String _projectionText(StudentGpaProjectionData projection) {
-    if (projection.suggestions.isEmpty) {
-      return projection.message;
+    final parts = <String>[projection.message];
+    if (projection.remainingCredits > 0 &&
+        projection.requiredGpaPerCredit != null) {
+      final score10 = projection.minimumScore10 == null
+          ? ''
+          : ' (khoảng ${projection.minimumScore10!.toStringAsFixed(1)}/10)';
+      parts.add(
+        'Còn ${projection.remainingCredits} tín chỉ cần trung bình ${projection.requiredGpaPerCredit!.toStringAsFixed(2)}/4.0$score10.',
+      );
     }
 
-    final first = projection.suggestions.first;
-    final minimumScore = projection.minimumScore10 == null
+    if (projection.suggestions.isEmpty) {
+      return parts.join('\n');
+    }
+
+    parts.add('Chi tiết từng môn:');
+    parts.addAll(
+      projection.suggestions.map(
+        (item) => _formatProjectionSuggestion(item, projection),
+      ),
+    );
+    return parts.join('\n');
+  }
+
+  String _formatProjectionSuggestion(
+    StudentGpaProjectionSuggestion item,
+    StudentGpaProjectionData projection,
+  ) {
+    final code = item.courseCode == null || item.courseCode!.trim().isEmpty
         ? ''
-        : ' khoảng ${projection.minimumScore10!.toStringAsFixed(1)}/10';
-    return '${projection.message} Ưu tiên ${first.courseName}: cần tối thiểu ${first.requiredScore.toStringAsFixed(1)} điểm thành phần$minimumScore.';
+        : '${item.courseCode!.trim()} - ';
+    final credits = item.credits > 0 ? ' (${item.credits} tín chỉ)' : '';
+    final requiredGpa = projection.requiredGpaPerCredit;
+
+    if (requiredGpa != null && requiredGpa > 4) {
+      final maxGpa = projection.maxPossibleGpa == null
+          ? ''
+          : ' Dù môn này đạt 10.0/10, GPA tối đa học kỳ chỉ ${projection.maxPossibleGpa!.toStringAsFixed(2)}.';
+      return '- $code${item.courseName}$credits: cần trung bình ${requiredGpa.toStringAsFixed(2)}/4.0 nên không khả thi.$maxGpa';
+    }
+
+    final letter = item.expectedLetter == null || item.expectedLetter!.isEmpty
+        ? ''
+        : ', mốc ${item.expectedLetter}';
+    final targetScore = item.minimumScore10 == null
+        ? ''
+        : 'tổng kết tối thiểu ${item.minimumScore10!.toStringAsFixed(1)}/10$letter';
+    final missingWeight = item.missingWeight == null
+        ? ''
+        : ' cho ${item.missingWeight!.toStringAsFixed(0)}% trọng số còn thiếu';
+    final requiredPart = item.status == 'DA_DU_AN_TOAN'
+        ? 'đã đủ an toàn với điểm hiện tại'
+        : 'phần còn thiếu cần khoảng ${item.requiredScore.toStringAsFixed(1)}/10$missingWeight';
+    final feasibleWarning = item.isFeasible
+        ? ''
+        : ' Mức này vượt quá 10/10 nên không khả thi với điểm hiện tại.';
+    final warning = item.warning == null || item.warning!.isEmpty
+        ? ''
+        : ' (${item.warning})';
+    final separator = targetScore.isEmpty ? '' : '; ';
+
+    return '- $code${item.courseName}$credits: $targetScore$separator$requiredPart$feasibleWarning$warning.';
   }
 
   Future<void> _openCourseModal(_ManagedCourse? course) async {
@@ -559,7 +613,10 @@ class _StudentCourseManagementPageState
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _CourseModal(course: course),
+      builder: (context) => _CourseModal(
+        course: course,
+        onSave: (draft) => _saveCourse(course, draft, showErrorSnack: false),
+      ),
     );
 
     if (!mounted || result == null) {
@@ -612,6 +669,12 @@ class _StudentCourseManagementPageState
     if (saved == true && mounted) {
       await _reload(showLoader: false);
       await widget.onChanged?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã cập nhật điểm thành công.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -622,7 +685,9 @@ class _StudentCourseManagementPageState
 
     final isEditing = semester != null;
     final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController(text: semester?.name ?? '');
+    final nameController = TextEditingController(
+      text: _semesterNumberFromName(semester?.name),
+    );
     final startYearController = TextEditingController(
       text: _yearFromSemesterValue(semester?.startDate),
     );
@@ -652,12 +717,18 @@ class _StudentCourseManagementPageState
                       controller: nameController,
                       style: TextStyle(color: colors.text),
                       decoration: _semesterInputDecoration(
-                        'Tên học kỳ',
+                        'Học kỳ',
                         colors,
                       ),
+                      keyboardType: TextInputType.number,
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Vui lòng nhập tên học kỳ';
+                        final semesterNumber = int.tryParse(
+                          (value ?? '').trim(),
+                        );
+                        if (semesterNumber == null ||
+                            semesterNumber < 1 ||
+                            semesterNumber > 3) {
+                          return 'Học kỳ chỉ được nhập 1, 2 hoặc 3';
                         }
                         return null;
                       },
@@ -671,10 +742,17 @@ class _StudentCourseManagementPageState
                         colors,
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       validator: (value) {
                         final year = int.tryParse((value ?? '').trim());
                         if (year == null || year < 1900 || year > 2100) {
                           return 'Vui lòng nhập năm bắt đầu hợp lệ';
+                        }
+                        final endYear = int.tryParse(
+                          endYearController.text.trim(),
+                        );
+                        if (endYear != null && endYear != year + 1) {
+                          return 'Năm kết thúc phải bằng năm bắt đầu + 1';
                         }
                         return null;
                       },
@@ -688,10 +766,17 @@ class _StudentCourseManagementPageState
                         colors,
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       validator: (value) {
                         final year = int.tryParse((value ?? '').trim());
                         if (year == null || year < 1900 || year > 2100) {
                           return 'Vui lòng nhập năm kết thúc hợp lệ';
+                        }
+                        final startYear = int.tryParse(
+                          startYearController.text.trim(),
+                        );
+                        if (startYear != null && year != startYear + 1) {
+                          return 'Năm kết thúc phải bằng năm bắt đầu + 1';
                         }
                         return null;
                       },
@@ -719,8 +804,9 @@ class _StudentCourseManagementPageState
                     return;
                   }
                   FocusManager.instance.primaryFocus?.unfocus();
+                  final semesterNumber = int.parse(nameController.text.trim());
                   final draft = _SemesterDraft(
-                    name: nameController.text.trim(),
+                    name: 'Học kì $semesterNumber',
                     startYear: startYearController.text.trim(),
                     endYear: endYearController.text.trim(),
                   );
@@ -855,7 +941,7 @@ class _StudentCourseManagementPageState
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Xóa',
-              style: TextStyle(color: Color(0xFFFFB4AB)),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -863,7 +949,11 @@ class _StudentCourseManagementPageState
     );
   }
 
-  Future<void> _saveCourse(_ManagedCourse? course, _CourseDraft draft) async {
+  Future<void> _saveCourse(
+    _ManagedCourse? course,
+    _CourseDraft draft, {
+    bool showErrorSnack = true,
+  }) async {
     final semesterId = course?.semesterId ?? _selectedSemesterId;
     if (semesterId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -918,9 +1008,12 @@ class _StudentCourseManagementPageState
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      if (showErrorSnack) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -996,7 +1089,7 @@ class _StudentCourseManagementPageState
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
               'Vẫn xóa',
-              style: TextStyle(color: Color(0xFFFFB4AB)),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1055,19 +1148,31 @@ class _GpaDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
     double totalCredits = 0;
-    double totalWeighted4 = 0;
-    double totalWeighted10 = 0;
+    double completedCredits = 0;
+    double completedWeighted4 = 0;
+    double completedWeighted10 = 0;
 
     for (final course in courses) {
-      final avg10 = course.averageGrade;
-      final avg4 = isLinearFormula ? (avg10 / 10) * 4 : course.gpa4;
-      totalWeighted4 += avg4 * course.credits;
-      totalWeighted10 += avg10 * course.credits;
       totalCredits += course.credits;
+      if (!course.hasCompletedGrade) {
+        continue;
+      }
+      final avg10 = course.backendAverage10 ?? course.averageGrade;
+      final avg4 = isLinearFormula ? (avg10 / 10) * 4 : course.gpa4;
+      completedWeighted4 += avg4 * course.credits;
+      completedWeighted10 += avg10 * course.credits;
+      completedCredits += course.credits;
     }
 
-    final finalGpa4 = totalCredits > 0 ? totalWeighted4 / totalCredits : 0.0;
-    final finalGpa10 = totalCredits > 0 ? totalWeighted10 / totalCredits : 0.0;
+    final remainingCredits = (totalCredits - completedCredits)
+        .clamp(0, double.infinity)
+        .toDouble();
+    final finalGpa4 = completedCredits > 0
+        ? completedWeighted4 / completedCredits
+        : 0.0;
+    final finalGpa10 = completedCredits > 0
+        ? completedWeighted10 / completedCredits
+        : 0.0;
 
     String honorText = 'Trung bình';
     Color honorColor = colors.textMuted;
@@ -1082,13 +1187,31 @@ class _GpaDashboard extends StatelessWidget {
       honorColor = colors.info;
     }
 
-    const simulatedUpcomingCredits = 15.0;
-    final totalSimulatedCredits = totalCredits + simulatedUpcomingCredits;
-    final requiredUpcomingWeighted4 =
-        targetGpa * totalSimulatedCredits - totalWeighted4;
-    final requiredUpcomingAvg4 = simulatedUpcomingCredits > 0
-        ? requiredUpcomingWeighted4 / simulatedUpcomingCredits
+    final requiredRemainingWeighted4 =
+        targetGpa * totalCredits - completedWeighted4;
+    final requiredRemainingAvg4 = remainingCredits > 0
+        ? requiredRemainingWeighted4 / remainingCredits
         : 0.0;
+    final maxPossibleGpa = totalCredits > 0
+        ? (completedWeighted4 + remainingCredits * 4) / totalCredits
+        : 0.0;
+    final completedCourseCount = courses
+        .where((course) => course.hasCompletedGrade && course.credits > 0)
+        .length;
+    final remainingCourseCount = courses
+        .where((course) => !course.hasCompletedGrade && course.credits > 0)
+        .length;
+    final localProjectionAdvice = _buildLocalProjectionAdvice(
+      targetGpa: targetGpa,
+      totalCredits: totalCredits,
+      completedCredits: completedCredits,
+      remainingCredits: remainingCredits,
+      completedCourseCount: completedCourseCount,
+      remainingCourseCount: remainingCourseCount,
+      requiredRemainingAvg4: requiredRemainingAvg4,
+      maxPossibleGpa: maxPossibleGpa,
+      useLinearScore: isLinearFormula,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1336,7 +1459,7 @@ class _GpaDashboard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              if (targetGpa > finalGpa4 || backendAdvice != null)
+              if (localProjectionAdvice != null || backendAdvice != null)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1353,10 +1476,7 @@ class _GpaDashboard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          backendAdvice ??
-                              (requiredUpcomingAvg4 > 4
-                                  ? 'Mục tiêu rất cao! Bạn cần đăng ký thêm học phần hoặc hạ mục tiêu kỳ này để đạt tích lũy mong muốn.'
-                                  : 'Kế hoạch học tập: Để đạt $targetGpa, bạn cần đạt trung bình tối thiểu ${requiredUpcomingAvg4.toStringAsFixed(2)} / 4.0 (khoảng ${(requiredUpcomingAvg4 * 2.5).toStringAsFixed(1)}/10) cho 15 tín chỉ tiếp theo.'),
+                          backendAdvice ?? localProjectionAdvice!,
                           style: TextStyle(
                             fontSize: 11,
                             color: colors.danger,
@@ -1373,6 +1493,47 @@ class _GpaDashboard extends StatelessWidget {
       ],
     );
   }
+}
+
+String? _buildLocalProjectionAdvice({
+  required double targetGpa,
+  required double totalCredits,
+  required double completedCredits,
+  required double remainingCredits,
+  required int completedCourseCount,
+  required int remainingCourseCount,
+  required double requiredRemainingAvg4,
+  required double maxPossibleGpa,
+  required bool useLinearScore,
+}) {
+  if (totalCredits <= 0) {
+    return 'Thêm môn học và số tín chỉ trước khi dự phóng GPA học kỳ.';
+  }
+
+  if (remainingCredits <= 0) {
+    final currentGpa = completedCredits > 0 ? maxPossibleGpa : 0.0;
+    if (currentGpa + 0.005 >= targetGpa) {
+      return 'Tất cả môn đã có điểm và GPA hiện tại đã đạt mục tiêu ${targetGpa.toStringAsFixed(2)}.';
+    }
+    return 'Tất cả môn đã có điểm nên không thể dự phóng thêm. GPA hiện tại là ${currentGpa.toStringAsFixed(2)}, thấp hơn mục tiêu ${targetGpa.toStringAsFixed(2)}.';
+  }
+
+  if (requiredRemainingAvg4 > 4) {
+    return 'Mục tiêu ${targetGpa.toStringAsFixed(2)} chưa khả thi với điểm hiện tại. Nếu các môn còn lại đều đạt 4.0, GPA tối đa của học kỳ là ${maxPossibleGpa.toStringAsFixed(2)}.';
+  }
+
+  if (requiredRemainingAvg4 <= 0) {
+    return 'Bạn đã chắc chắn đạt mục tiêu ${targetGpa.toStringAsFixed(2)} với các môn đã có điểm.';
+  }
+
+  final score10 = useLinearScore
+      ? ' (khoảng ${(requiredRemainingAvg4 * 2.5).toStringAsFixed(1)}/10)'
+      : '';
+  if (completedCourseCount == 0) {
+    return 'Chưa có môn nào nhập đủ điểm. Để đạt GPA ${targetGpa.toStringAsFixed(2)}, $remainingCourseCount môn / ${remainingCredits.toStringAsFixed(0)} tín chỉ cần trung bình ${requiredRemainingAvg4.toStringAsFixed(2)}/4.0$score10.';
+  }
+
+  return 'Đã có điểm $completedCourseCount môn / ${completedCredits.toStringAsFixed(0)} tín chỉ. Các môn còn lại cần trung bình ${requiredRemainingAvg4.toStringAsFixed(2)}/4.0$score10 để đạt GPA ${targetGpa.toStringAsFixed(2)}.';
 }
 
 class _CourseCard extends StatelessWidget {
@@ -1656,9 +1817,10 @@ class _MiniGradeTag extends StatelessWidget {
 }
 
 class _CourseModal extends StatefulWidget {
-  const _CourseModal({this.course});
+  const _CourseModal({this.course, required this.onSave});
 
   final _ManagedCourse? course;
+  final Future<void> Function(_CourseDraft draft) onSave;
 
   @override
   State<_CourseModal> createState() => _CourseModalState();
@@ -1672,6 +1834,8 @@ class _CourseModalState extends State<_CourseModal> {
   late double _attendanceWeight;
   late double _midtermWeight;
   late double _finalWeight;
+  String? _weightError;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -1736,7 +1900,7 @@ class _CourseModalState extends State<_CourseModal> {
                   ),
                   IconButton(
                     icon: Icon(Icons.close, color: colors.textMuted),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _saving ? null : () => Navigator.pop(context),
                   ),
                 ],
               ),
@@ -1798,6 +1962,10 @@ class _CourseModalState extends State<_CourseModal> {
                   ],
                 ),
               ),
+              if (_weightError != null) ...[
+                const SizedBox(height: 12),
+                _InlineModalError(message: _weightError!),
+              ],
               const SizedBox(height: 16),
               TextFormField(
                 initialValue: _name,
@@ -1854,15 +2022,24 @@ class _CourseModalState extends State<_CourseModal> {
               ),
               const SizedBox(height: 12),
               _buildSliderRow('Chuyên cần (%)', _attendanceWeight, (value) {
-                setState(() => _attendanceWeight = value);
+                setState(() {
+                  _attendanceWeight = value;
+                  _weightError = null;
+                });
               }),
               const SizedBox(height: 12),
               _buildSliderRow('Giữa kỳ (%)', _midtermWeight, (value) {
-                setState(() => _midtermWeight = value);
+                setState(() {
+                  _midtermWeight = value;
+                  _weightError = null;
+                });
               }),
               const SizedBox(height: 12),
               _buildSliderRow('Cuối kỳ (%)', _finalWeight, (value) {
-                setState(() => _finalWeight = value);
+                setState(() {
+                  _finalWeight = value;
+                  _weightError = null;
+                });
               }),
               const SizedBox(height: 8),
               Text(
@@ -1874,11 +2051,20 @@ class _CourseModalState extends State<_CourseModal> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.save),
-                  label: const Text(
-                    'Lưu học phần',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _saving ? 'Đang lưu...' : 'Lưu học phần',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: colors.primaryStrong,
@@ -1895,10 +2081,12 @@ class _CourseModalState extends State<_CourseModal> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(
-                      context,
-                      _CourseModalResult.delete(widget.course!.id),
-                    ),
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.pop(
+                            context,
+                            _CourseModalResult.delete(widget.course!.id),
+                          ),
                     icon: Icon(Icons.delete_outline, color: colors.danger),
                     label: Text(
                       'Xóa môn học này',
@@ -1987,31 +2175,53 @@ class _CourseModalState extends State<_CourseModal> {
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
     final totalWeight = _attendanceWeight + _midtermWeight + _finalWeight;
     if ((totalWeight - 100).abs() > 0.01) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tổng trọng số phải bằng 100%')),
-      );
+      setState(() {
+        _weightError = 'Cấu hình trọng số thất bại. Tổng trọng số phải bằng 100%.';
+      });
       return;
     }
     _formKey.currentState!.save();
-    Navigator.pop(
-      context,
-      _CourseModalResult.save(
-        _CourseDraft(
-          code: _code,
-          name: _name,
-          credits: _credits,
-          attendanceWeight: _attendanceWeight,
-          midtermWeight: _midtermWeight,
-          finalWeight: _finalWeight,
-        ),
-      ),
+    final draft = _CourseDraft(
+      code: _code,
+      name: _name,
+      credits: _credits,
+      attendanceWeight: _attendanceWeight,
+      midtermWeight: _midtermWeight,
+      finalWeight: _finalWeight,
     );
+
+    setState(() {
+      _saving = true;
+      _weightError = null;
+    });
+    try {
+      await widget.onSave(draft);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _weightError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _weightError = 'Không thể lưu học phần lúc này.';
+      });
+    }
   }
 }
 
@@ -2102,6 +2312,8 @@ class _ManagedCourse {
 
   double get gpa4 => backendGpa4 ?? _convert10To4(averageGrade);
 
+  bool get hasCompletedGrade => backendGpa4 != null;
+
   factory _ManagedCourse.fromBackend(
     StudentCourseItem course,
     StudentGradeCourse? grade,
@@ -2183,6 +2395,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
   bool _isSaving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -2261,6 +2474,10 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
                 'Chỉ nhập điểm, trọng số đã được cấu hình riêng.',
                 style: TextStyle(color: colors.textMuted, fontSize: 12),
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                _InlineModalError(message: _errorMessage!),
+              ],
               const SizedBox(height: 16),
               ...components.map((component) {
                 final controller = _controllers[component.id]!;
@@ -2377,7 +2594,10 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
       return;
     }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
     try {
       for (final component in widget.course.components) {
         final value = double.parse(_controllers[component.id]!.text.trim());
@@ -2404,9 +2624,9 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      setState(() {
+        _errorMessage = error.message;
+      });
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -2665,11 +2885,47 @@ class _SemesterOverviewCard extends StatelessWidget {
   }
 }
 
+class _InlineModalError extends StatelessWidget {
+  const _InlineModalError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = StudentThemeScope.colorsOf(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.danger.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.danger.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: colors.danger, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: colors.danger,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 String _semesterDateRange(StudentSemester semester) {
   final start = semester.startDate?.trim();
   final end = semester.endDate?.trim();
   if ((start == null || start.isEmpty) && (end == null || end.isEmpty)) {
-    return 'Chưa có ngày';
+    return 'Chưa có năm học';
   }
   if (start == null || start.isEmpty) {
     return 'Đến ${_yearFromSemesterValue(end)}';
@@ -2677,7 +2933,7 @@ String _semesterDateRange(StudentSemester semester) {
   if (end == null || end.isEmpty) {
     return 'Từ ${_yearFromSemesterValue(start)}';
   }
-  return '${_yearFromSemesterValue(start)} - ${_yearFromSemesterValue(end)}';
+  return '${_yearFromSemesterValue(start)}-${_yearFromSemesterValue(end)}';
 }
 
 String _yearFromSemesterValue(String? value) {
@@ -2686,6 +2942,12 @@ String _yearFromSemesterValue(String? value) {
     return trimmed.substring(0, 4);
   }
   return trimmed;
+}
+
+String _semesterNumberFromName(String? name) {
+  final trimmed = name?.trim() ?? '';
+  final match = RegExp(r'(\d+)').firstMatch(trimmed);
+  return match?.group(1) ?? '';
 }
 
 StudentGradeComponent? _findComponent(
