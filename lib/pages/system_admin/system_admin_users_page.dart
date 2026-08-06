@@ -107,47 +107,37 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
   }
 
   Future<void> _openCreateUserDialog() async {
-    final input = await showDialog<_CreateUserInput>(
+    final result = await showDialog<CreateManagedUserResult>(
       context: context,
-      builder: (context) => const _CreateUserDialog(),
+      builder: (context) => _CreateUserDialog(
+        onSubmit: (input) => widget.api.createAdminUser(
+          email: input.email,
+          fullName: input.fullName,
+          roleCode: input.roleCode,
+        ),
+      ),
     );
 
-    if (input == null) {
+    if (result == null || !mounted) {
       return;
     }
 
-    try {
-      final result = await widget.api.createAdminUser(
-        email: input.email,
-        fullName: input.fullName,
-        roleCode: input.roleCode,
-      );
+    _showTemporaryPassword(
+      userName: result.user.fullName,
+      password: result.temporaryPassword,
+      expiresAt: result.temporaryPasswordExpiresAt,
+    );
 
-      if (!mounted) {
-        return;
-      }
+    final currentData = await _future.then(
+      (list) => list,
+      onError: (_) => <ManagedUser>[],
+    );
+    setState(() {
+      _future = Future.value([...currentData, result.user]);
+    });
 
-      _showTemporaryPassword(
-        userName: result.user.fullName,
-        password: result.temporaryPassword,
-        expiresAt: result.temporaryPasswordExpiresAt,
-      );
-
-      final currentData = await _future.then(
-        (list) => list,
-        onError: (_) => <ManagedUser>[],
-      );
-      setState(() {
-        _future = Future.value([...currentData, result.user]);
-      });
-
-      // Refresh ngầm để đồng bộ dữ liệu chính xác từ server
-      _refresh().catchError((_) {});
-    } on ApiException catch (error) {
-      _showError(error.message);
-    } catch (_) {
-      _showError('Không thể tạo tài khoản quản trị.');
-    }
+    // Refresh ngầm để đồng bộ dữ liệu chính xác từ server
+    _refresh().catchError((_) {});
   }
 
   Future<void> _updateStatus(ManagedUser user, ManagedUserStatus status) async {
@@ -636,7 +626,10 @@ class _Pill extends StatelessWidget {
 }
 
 class _CreateUserDialog extends StatefulWidget {
-  const _CreateUserDialog();
+  const _CreateUserDialog({required this.onSubmit});
+
+  final Future<CreateManagedUserResult> Function(_CreateUserInput input)
+      onSubmit;
 
   @override
   State<_CreateUserDialog> createState() => _CreateUserDialogState();
@@ -647,6 +640,8 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   UserRoleCode _roleCode = UserRoleCode.admin;
+  bool _saving = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -665,8 +660,13 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_errorMessage != null) ...[
+                SystemAdminInlineMessage(message: _errorMessage!),
+                const SizedBox(height: 12),
+              ],
               TextFormField(
                 controller: _fullNameController,
+                enabled: !_saving,
                 decoration: const InputDecoration(labelText: 'Họ tên'),
                 validator: (value) {
                   if ((value ?? '').trim().isEmpty) {
@@ -678,6 +678,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
+                enabled: !_saving,
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
@@ -702,11 +703,13 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                     child: Text('Quản trị viên'),
                   ),
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _roleCode = value);
-                  }
-                },
+                onChanged: _saving
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => _roleCode = value);
+                        }
+                      },
               ),
             ],
           ),
@@ -714,27 +717,54 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
           child: const Text('Hủy'),
         ),
         FilledButton(
-          onPressed: () {
-            if (!_formKey.currentState!.validate()) {
-              return;
-            }
-
-            Navigator.of(context).pop(
-              _CreateUserInput(
-                fullName: _fullNameController.text.trim(),
-                email: _emailController.text.trim(),
-                roleCode: _roleCode,
-              ),
-            );
-          },
-          child: const Text('Tạo'),
+          onPressed: _saving ? null : _submit,
+          child: Text(_saving ? 'Đang tạo...' : 'Tạo'),
         ),
       ],
     );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      final result = await widget.onSubmit(
+        _CreateUserInput(
+          fullName: _fullNameController.text.trim(),
+          email: _emailController.text.trim(),
+          roleCode: _roleCode,
+        ),
+      );
+      if (mounted) {
+        Navigator.of(context).pop(result);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = 'Không thể tạo tài khoản quản trị.';
+      });
+    }
   }
 }
 
