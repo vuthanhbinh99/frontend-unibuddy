@@ -107,29 +107,44 @@ class StudentGradeCourse {
 class StudentGpaProjectionSuggestion {
   const StudentGpaProjectionSuggestion({
     required this.courseId,
+    required this.courseCode,
     required this.courseName,
     required this.credits,
     required this.requiredScore,
+    required this.minimumScore10,
+    required this.expectedLetter,
+    required this.missingWeight,
+    required this.warning,
     required this.status,
     required this.isFeasible,
   });
 
   final String courseId;
+  final String? courseCode;
   final String courseName;
   final int credits;
   final double requiredScore;
+  final double? minimumScore10;
+  final String? expectedLetter;
+  final double? missingWeight;
+  final String? warning;
   final String status;
   final bool isFeasible;
 
   factory StudentGpaProjectionSuggestion.fromJson(Map<String, dynamic> json) {
     return StudentGpaProjectionSuggestion(
       courseId: json['maMonHoc'] as String? ?? '',
+      courseCode: json['maMon'] as String?,
       courseName: json['tenMon'] as String? ?? '--',
       credits: (json['soTinChi'] as num?)?.toInt() ?? 0,
       requiredScore:
           (json['diemThanhPhanCanDat'] as num?)?.toDouble() ??
           (json['diemHe10ToiThieu'] as num?)?.toDouble() ??
           0,
+      minimumScore10: (json['diemHe10ToiThieu'] as num?)?.toDouble(),
+      expectedLetter: json['diemChuDuKien'] as String?,
+      missingWeight: (json['tongTrongSoConThieu'] as num?)?.toDouble(),
+      warning: json['canhBao'] as String?,
       status: json['trangThai'] as String? ?? '--',
       isFeasible: json['khaThi'] as bool? ?? true,
     );
@@ -140,6 +155,9 @@ class StudentGpaProjectionData {
   const StudentGpaProjectionData({
     required this.message,
     required this.targetGpa,
+    required this.totalCredits,
+    required this.completedCredits,
+    required this.remainingCredits,
     required this.currentGpa,
     required this.maxPossibleGpa,
     required this.requiredGpaPerCredit,
@@ -150,6 +168,9 @@ class StudentGpaProjectionData {
 
   final String message;
   final double targetGpa;
+  final int totalCredits;
+  final int completedCredits;
+  final int remainingCredits;
   final double? currentGpa;
   final double? maxPossibleGpa;
   final double? requiredGpaPerCredit;
@@ -165,6 +186,9 @@ class StudentGpaProjectionData {
     return StudentGpaProjectionData(
       message: map['message'] as String? ?? 'Đã tính dự phóng GPA.',
       targetGpa: (map['targetGpa'] as num?)?.toDouble() ?? 0,
+      totalCredits: (map['tongTinChi'] as num?)?.toInt() ?? 0,
+      completedCredits: (map['soTinChiDaHoanThanh'] as num?)?.toInt() ?? 0,
+      remainingCredits: (map['soTinChiConLai'] as num?)?.toInt() ?? 0,
       currentGpa: (map['gpaHienTai'] as num?)?.toDouble(),
       maxPossibleGpa: (map['gpaToiDaCoTheDat'] as num?)?.toDouble(),
       requiredGpaPerCredit: (map['diemHe4CanDatMoiTinChi'] as num?)?.toDouble(),
