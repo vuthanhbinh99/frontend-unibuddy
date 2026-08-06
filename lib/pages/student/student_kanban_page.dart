@@ -6,6 +6,7 @@ import '../../models/student_study_group_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
+import 'widgets/student_inline_message.dart';
 import 'widgets/student_notification_dropdown.dart';
 
 enum _TaskPriority { high, medium, low }
@@ -13,14 +14,17 @@ enum _TaskPriority { high, medium, low }
 class StudentKanbanPage extends StatefulWidget {
   const StudentKanbanPage({
     super.key,
+    required this.currentUserId,
     required this.studentApi,
     this.initialGroupId,
     this.onViewAllNotifications,
+    this.onKanbanChanged,
   });
-
+  final String currentUserId;
   final StudentApiService studentApi;
   final String? initialGroupId;
   final VoidCallback? onViewAllNotifications;
+  final VoidCallback? onKanbanChanged;
 
   @override
   State<StudentKanbanPage> createState() => _StudentKanbanPageState();
@@ -29,7 +33,6 @@ class StudentKanbanPage extends StatefulWidget {
 class _StudentKanbanPageState extends State<StudentKanbanPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final Map<String, List<StudentKanbanComment>> _sessionComments = {};
 
   StudentKanbanBoardData? _board;
   List<StudentKanbanTask> _tasks = [];
@@ -38,6 +41,14 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
   String? _errorMessage;
   bool _loading = false;
   bool _loadingGroups = false;
+  bool _showAllTasksForLeader = true;
+
+  bool get _canViewAllTasks => _board?.myRole == 'TRUONG_NHOM';
+
+  bool _canSeeTask(StudentKanbanTask task) {
+    return (_canViewAllTasks && _showAllTasksForLeader) ||
+        task.assigneeId == widget.currentUserId;
+  }
 
   @override
   void initState() {
@@ -269,6 +280,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
             setState(() {
               _tasks = _sortTasks([..._tasks, task]);
             });
+            widget.onKanbanChanged?.call();
             _showSnack('Đã thêm công việc vào Kanban.');
           },
         );
@@ -295,7 +307,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
             return _TaskDetailsWidget(
               task: task,
               members: _board?.members ?? const [],
-              comments: _sessionComments[task.id] ?? const [],
+              comments: task.comments,
               scrollController: scrollController,
               canEdit: _board?.myRole == 'TRUONG_NHOM',
               onStatusChanged: (status) => _changeTaskStatus(task, status),
@@ -320,6 +332,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
     if (mounted) {
       _replaceTask(updated);
+      widget.onKanbanChanged?.call();
       _showSnack('Đã cập nhật trạng thái công việc.');
     }
     return updated;
@@ -337,6 +350,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
     if (mounted) {
       _replaceTask(updated);
+      widget.onKanbanChanged?.call();
       _showSnack('Đã cập nhật hạn hoàn thành.');
     }
     return updated;
@@ -351,11 +365,12 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
       content: content,
     );
     if (mounted) {
-      setState(() {
-        final comments = [...?_sessionComments[task.id], comment];
-        _sessionComments[task.id] = comments;
-      });
-      _replaceTask(task.copyWith(commentCount: task.commentCount + 1));
+      _replaceTask(
+        task.copyWith(
+          commentCount: task.commentCount + 1,
+          comments: [...task.comments, comment],
+        ),
+      );
     }
     return comment;
   }
@@ -363,7 +378,15 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
   void _replaceTask(StudentKanbanTask updated) {
     setState(() {
       _tasks = _sortTasks(
-        _tasks.map((task) => task.id == updated.id ? updated : task).toList(),
+        _tasks.map((task) {
+          if (task.id != updated.id) {
+            return task;
+          }
+
+          return updated.comments.isEmpty && task.comments.isNotEmpty
+              ? updated.copyWith(comments: task.comments)
+              : updated;
+        }).toList(),
       );
     });
   }
@@ -445,6 +468,10 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
             _buildHeader(),
             if (_errorMessage != null) _buildErrorBanner(),
             const SizedBox(height: 15),
+            if (_canViewAllTasks) ...[
+              _buildTaskScopeSelector(),
+              const SizedBox(height: 15),
+            ],
             _buildTabs(),
             const SizedBox(height: 15),
             Expanded(
@@ -462,15 +489,17 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _openCreateTaskSheet,
-          backgroundColor: colors.primaryStrong,
-          foregroundColor: colors.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: const Icon(Icons.add, size: 28),
-        ),
+        floatingActionButton: _canViewAllTasks
+            ? FloatingActionButton(
+                onPressed: _openCreateTaskSheet,
+                backgroundColor: colors.primaryStrong,
+                foregroundColor: colors.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: const Icon(Icons.add, size: 28),
+              )
+            : null,
       ),
     );
   }
@@ -637,6 +666,74 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  Widget _buildTaskScopeSelector() {
+    final colors = StudentThemeScope.colorsOf(context);
+    final myTaskCount = _tasks
+        .where((task) => task.assigneeId == widget.currentUserId)
+        .length;
+    final allTaskCount = _tasks.length;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: colors.surfaceAlt.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          _buildTaskScopeOption(
+            label: 'Của tôi',
+            count: myTaskCount,
+            selected: !_showAllTasksForLeader,
+            onTap: () => setState(() => _showAllTasksForLeader = false),
+          ),
+          _buildTaskScopeOption(
+            label: 'Toàn nhóm',
+            count: allTaskCount,
+            selected: _showAllTasksForLeader,
+            onTap: () => setState(() => _showAllTasksForLeader = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskScopeOption({
+    required String label,
+    required int count,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final colors = StudentThemeScope.colorsOf(context);
+    return Expanded(
+      child: InkWell(
+        onTap: selected ? null : onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 10),
+          decoration: BoxDecoration(
+            color: selected ? colors.primaryStrong : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Text(
+            '$label ($count)',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? colors.onPrimary : colors.textSubtle,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTaskList(StudentKanbanStatus status) {
     final colors = StudentThemeScope.colorsOf(context);
     if (_activeGroupId == null || _activeGroupId!.isEmpty) {
@@ -649,7 +746,10 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
       );
     }
 
-    final filtered = _tasks.where((task) => task.status == status).toList();
+    final filtered = _tasks
+        .where((task) => task.status == status)
+        .where(_canSeeTask)
+        .toList();
     if (filtered.isEmpty) {
       return Center(
         child: Text(
@@ -947,6 +1047,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
   bool _sendingComment = false;
   bool _changingStatus = false;
   bool _editingDue = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -966,18 +1067,16 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
       return;
     }
     if (status == StudentKanbanStatus.overdue) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Trễ hạn do hệ thống tự cập nhật khi quá hạn, không chuyển thủ công.',
-          ),
-        ),
-      );
+      setState(() {
+        _errorMessage =
+            'Trễ hạn do hệ thống tự cập nhật khi quá hạn, không chuyển thủ công.';
+      });
       return;
     }
 
     setState(() {
       _changingStatus = true;
+      _errorMessage = null;
     });
     try {
       final updated = await widget.onStatusChanged(status);
@@ -995,10 +1094,8 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
       }
       setState(() {
         _changingStatus = false;
+        _errorMessage = error.message;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -1013,6 +1110,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
 
     setState(() {
       _editingDue = true;
+      _errorMessage = null;
     });
     try {
       final updated = await widget.onEditDue(picked);
@@ -1030,10 +1128,8 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
       }
       setState(() {
         _editingDue = false;
+        _errorMessage = error.message;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -1045,6 +1141,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
 
     setState(() {
       _sendingComment = true;
+      _errorMessage = null;
     });
     try {
       final comment = await widget.onComment(content);
@@ -1063,10 +1160,8 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
       }
       setState(() {
         _sendingComment = false;
+        _errorMessage = error.message;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -1143,9 +1238,13 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
                             .toList(),
                         onChanged: _changeStatus,
                       ),
-                    ),
+                  ),
                 ],
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                StudentInlineMessage(message: _errorMessage!),
+              ],
               const SizedBox(height: 15),
               Text(
                 task.title,
@@ -1236,7 +1335,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
                   ),
                   child: Text(
                     task.commentCount > 0
-                        ? 'Có ${task.commentCount} bình luận trước đó. Bình luận mới của bạn sẽ xuất hiện tại đây.'
+                        ? 'Có ${task.commentCount} bình luận nhưng chưa tải được nội dung. Vui lòng tải lại bảng Kanban.'
                         : 'Chưa có thảo luận nào cho công việc này.',
                     style: TextStyle(fontSize: 12, color: colors.textMuted),
                   ),
@@ -1388,6 +1487,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   bool _assignAllMembers = false;
   DateTime? _dueDate;
   bool _saving = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -1409,14 +1509,15 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tiêu đề công việc.')),
-      );
+      setState(() {
+        _errorMessage = 'Vui lòng nhập tiêu đề công việc.';
+      });
       return;
     }
 
     setState(() {
       _saving = true;
+      _errorMessage = null;
     });
     try {
       await widget.onSubmit(
@@ -1437,20 +1538,16 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
       }
       setState(() {
         _saving = false;
+        _errorMessage = error.message;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
     } catch (_) {
       if (!mounted) {
         return;
       }
       setState(() {
         _saving = false;
+        _errorMessage = 'Không thể thêm công việc lúc này.';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không thể thêm công việc lúc này.')),
-      );
     }
   }
 
@@ -1488,6 +1585,10 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
             const SizedBox(height: 18),
             _KanbanTextField(
               controller: _titleController,
