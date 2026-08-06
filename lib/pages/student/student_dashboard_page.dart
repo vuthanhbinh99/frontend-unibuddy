@@ -245,7 +245,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     Navigator.of(context).push(
       buildStudentThemedRoute<void>(
         controller: _studentThemeController,
-        builder: (_) => StudentExamManagementPage(studentApi: widget.studentApi),
+        builder: (_) =>
+            StudentExamManagementPage(studentApi: widget.studentApi),
       ),
     );
   }
@@ -697,99 +698,101 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             width: double.maxFinite,
             child: SingleChildScrollView(
               child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${headers.sourceType} • ${headers.rows.length} dòng • ${headers.headers.length} cột',
-                  style: TextStyle(
-                    color: colors.textMuted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _ImportPreviewStat(
-                  label: l10n.t('student.dashboard.schedule.importValidRows'),
-                  value: currentPreview.validRows.toString(),
-                  color: const Color(0xFF10B981),
-                ),
-                const SizedBox(height: 8),
-                _ImportPreviewStat(
-                  label: l10n.t('student.dashboard.schedule.importRowsToCheck'),
-                  value: currentPreview.invalidRows.toString(),
-                  color: const Color(0xFFF59E0B),
-                ),
-                const SizedBox(height: 8),
-                _ImportPreviewStat(
-                  label: l10n.t(
-                    'student.dashboard.schedule.importAutoCreatedCourses',
-                  ),
-                  value: currentPreview.autoCreateCourseRows.toString(),
-                  color: const Color(0xFF818CF8),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.t(
-                    'student.dashboard.schedule.importMappedColumnsTitle',
-                  ),
-                  style: TextStyle(
-                    color: colors.text,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.t(
-                    'student.dashboard.schedule.importMappedColumnsSubtitle',
-                  ),
-                  style: TextStyle(color: colors.textMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 10),
-                for (final field in _scheduleImportMappingFields(l10n))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _ImportMappingSelector(
-                      field: field,
-                      headers: headerOptions,
-                      selectedColumn: selectedColumns[field.key],
-                      colors: colors,
-                      onChanged: (value) {
-                        selectedColumns[field.key] = value;
-                      },
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${headers.sourceType} • ${headers.rows.length} dòng • ${headers.headers.length} cột',
+                    style: TextStyle(
+                      color: colors.textMuted,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                if (invalidSamples.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _ImportPreviewStat(
+                    label: l10n.t('student.dashboard.schedule.importValidRows'),
+                    value: currentPreview.validRows.toString(),
+                    color: const Color(0xFF10B981),
+                  ),
+                  const SizedBox(height: 8),
+                  _ImportPreviewStat(
+                    label: l10n.t(
+                      'student.dashboard.schedule.importRowsToCheck',
+                    ),
+                    value: currentPreview.invalidRows.toString(),
+                    color: const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(height: 8),
+                  _ImportPreviewStat(
+                    label: l10n.t(
+                      'student.dashboard.schedule.importAutoCreatedCourses',
+                    ),
+                    value: currentPreview.autoCreateCourseRows.toString(),
+                    color: const Color(0xFF818CF8),
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    l10n.t('student.dashboard.schedule.importSampleErrors'),
+                    l10n.t(
+                      'student.dashboard.schedule.importMappedColumnsTitle',
+                    ),
                     style: TextStyle(
                       color: colors.text,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  ...invalidSamples.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        l10n.t(
-                          'student.dashboard.schedule.importRowError',
-                          arguments: {
-                            'row': item.rowIndex,
-                            'errors': item.errors.join(', '),
-                          },
-                        ),
-                        style: TextStyle(
-                          color: colors.textMuted,
-                          fontSize: 12,
-                          height: 1.35,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.t(
+                      'student.dashboard.schedule.importMappedColumnsSubtitle',
+                    ),
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
+                  ),
+                  const SizedBox(height: 10),
+                  for (final field in _scheduleImportMappingFields(l10n))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _ImportMappingSelector(
+                        field: field,
+                        headers: headerOptions,
+                        selectedColumn: selectedColumns[field.key],
+                        colors: colors,
+                        onChanged: (value) {
+                          selectedColumns[field.key] = value;
+                        },
+                      ),
+                    ),
+                  if (invalidSamples.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.t('student.dashboard.schedule.importSampleErrors'),
+                      style: TextStyle(
+                        color: colors.text,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...invalidSamples.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          l10n.t(
+                            'student.dashboard.schedule.importRowError',
+                            arguments: {
+                              'row': item.rowIndex,
+                              'errors': item.errors.join(', '),
+                            },
+                          ),
+                          style: TextStyle(
+                            color: colors.textMuted,
+                            fontSize: 12,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
               ),
             ),
           ),
@@ -831,9 +834,9 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                         selectedColumns,
                       );
                       if (!_scheduleMappingsEqual(mapping, selectedMapping)) {
-                        Navigator.of(context).pop(
-                          _ScheduleImportMappingRefresh(selectedMapping),
-                        );
+                        Navigator.of(
+                          context,
+                        ).pop(_ScheduleImportMappingRefresh(selectedMapping));
                         return;
                       }
                       Navigator.of(context).pop(currentPreview);
@@ -1162,12 +1165,14 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           return StudentCatalogTab(
             data: bundle.courses,
             grades: bundle.grades,
+            currentUserId: widget.session.user.id,
             studentName: widget.session.user.fullName,
             studentMajor: widget.session.user.role.name,
             studentApi: widget.studentApi,
             onChangeTab: _selectTab,
             onAcademicDataChanged: _refreshAcademicData,
             onOpenExamManagement: _openExamManagement,
+            onKanbanChanged: () => unawaited(_refreshHome()),
             onRefresh: _refreshCatalog,
           );
         },
