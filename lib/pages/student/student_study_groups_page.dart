@@ -10,6 +10,7 @@ import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_kanban_page.dart';
 import 'student_theme.dart';
+import 'widgets/student_inline_message.dart';
 import 'widgets/student_notification_dropdown.dart';
 
 class StudentStudyGroupsPage extends StatefulWidget {
@@ -17,12 +18,16 @@ class StudentStudyGroupsPage extends StatefulWidget {
     super.key,
     required this.studentApi,
     required this.courses,
+    required this.currentUserId,
     this.onViewAllNotifications,
+    this.onKanbanChanged,
   });
 
   final StudentApiService studentApi;
   final List<StudentCourseItem> courses;
+  final String currentUserId;
   final VoidCallback? onViewAllNotifications;
+  final VoidCallback? onKanbanChanged;
 
   @override
   State<StudentStudyGroupsPage> createState() => _StudentStudyGroupsPageState();
@@ -137,63 +142,47 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
       return;
     }
 
-    final result = await showDialog<_CreateGroupResult>(
+    final group = await showDialog<StudentStudyGroup>(
       context: context,
       builder: (context) {
-        return _CreateGroupDialog(courses: _courseOptions);
+        return _CreateGroupDialog(
+          courses: _courseOptions,
+          onSubmit: (result) => widget.studentApi.createStudyGroup(
+            name: result.name,
+            courseId: result.courseId,
+            chatLink: result.chatLink,
+          ),
+        );
       },
     );
 
-    if (result == null) {
+    if (group == null || !mounted) {
       return;
     }
 
-    try {
-      final group = await widget.studentApi.createStudyGroup(
-        name: result.name,
-        courseId: result.courseId,
-        chatLink: result.chatLink,
-      );
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _groups = [group, ..._groups.where((item) => item.id != group.id)];
-        _activeTab = 'my_groups';
-      });
-      _showSnack('Đã tạo nhóm "${group.name}" thành công.');
-    } on ApiException catch (error) {
-      if (mounted) {
-        _showSnack(error.message);
-      }
-    }
+    setState(() {
+      _groups = [group, ..._groups.where((item) => item.id != group.id)];
+      _activeTab = 'my_groups';
+    });
+    _showSnack('Đã tạo nhóm "${group.name}" thành công.');
   }
 
   Future<void> _showJoinDialog() async {
-    final inviteCode = await showDialog<String>(
+    final group = await showDialog<StudentStudyGroup>(
       context: context,
-      builder: (context) => const _JoinGroupDialog(),
+      builder: (context) =>
+          _JoinGroupDialog(onSubmit: widget.studentApi.joinStudyGroup),
     );
 
-    if (inviteCode == null || inviteCode.trim().isEmpty) {
+    if (group == null || !mounted) {
       return;
     }
 
-    try {
-      final group = await widget.studentApi.joinStudyGroup(inviteCode);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _groups = [group, ..._groups.where((item) => item.id != group.id)];
-        _activeTab = 'my_groups';
-      });
-      _showSnack('Đã tham gia nhóm "${group.name}".');
-    } on ApiException catch (error) {
-      if (mounted) {
-        _showSnack(error.message);
-      }
-    }
+    setState(() {
+      _groups = [group, ..._groups.where((item) => item.id != group.id)];
+      _activeTab = 'my_groups';
+    });
+    _showSnack('Đã tham gia nhóm "${group.name}".');
   }
 
   Future<void> _leaveGroup(StudentStudyGroup group) async {
@@ -292,7 +281,9 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
         builder: (_) => _StudyGroupRoomPage(
           group: group,
           studentApi: widget.studentApi,
+          currentUserId: widget.currentUserId,
           onViewAllNotifications: widget.onViewAllNotifications,
+          onKanbanChanged: widget.onKanbanChanged,
         ),
       ),
     );
@@ -928,7 +919,9 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
 }
 
 class _JoinGroupDialog extends StatefulWidget {
-  const _JoinGroupDialog();
+  const _JoinGroupDialog({required this.onSubmit});
+
+  final Future<StudentStudyGroup> Function(String inviteCode) onSubmit;
 
   @override
   State<_JoinGroupDialog> createState() => _JoinGroupDialogState();
@@ -936,6 +929,8 @@ class _JoinGroupDialog extends StatefulWidget {
 
 class _JoinGroupDialogState extends State<_JoinGroupDialog> {
   final TextEditingController _controller = TextEditingController();
+  bool _saving = false;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -953,32 +948,82 @@ class _JoinGroupDialogState extends State<_JoinGroupDialog> {
         'Tham gia nhóm',
         style: TextStyle(color: colors.text, fontWeight: FontWeight.bold),
       ),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.characters,
-        autocorrect: false,
-        enableSuggestions: false,
-        style: TextStyle(color: colors.text),
-        decoration: InputDecoration(
-          labelText: 'Mã mời',
-          labelStyle: TextStyle(color: colors.primaryStrong),
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            enabled: !_saving,
+            textCapitalization: TextCapitalization.characters,
+            autocorrect: false,
+            enableSuggestions: false,
+            style: TextStyle(color: colors.text),
+            decoration: InputDecoration(
+              labelText: 'Mã mời',
+              labelStyle: TextStyle(color: colors.primaryStrong),
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            StudentInlineMessage(message: _errorMessage!),
+          ],
+        ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _saving ? null : () => Navigator.pop(context),
           child: const Text('Hủy'),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          onPressed: _saving ? null : _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: colors.primaryStrong,
           ),
-          child: Text('Tham gia', style: TextStyle(color: colors.onPrimary)),
+          child: Text(
+            _saving ? 'Đang tham gia...' : 'Tham gia',
+            style: TextStyle(color: colors.onPrimary),
+          ),
         ),
       ],
     );
+  }
+
+  Future<void> _submit() async {
+    final inviteCode = _controller.text.trim();
+    if (inviteCode.isEmpty) {
+      setState(() {
+        _errorMessage = 'Vui lòng nhập mã mời.';
+      });
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      final group = await widget.onSubmit(inviteCode);
+      if (mounted) {
+        Navigator.pop(context, group);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = 'Không thể tham gia nhóm lúc này.';
+      });
+    }
   }
 }
 
@@ -1034,9 +1079,10 @@ class _DeleteGroupPasswordDialogState
 }
 
 class _CreateGroupDialog extends StatefulWidget {
-  const _CreateGroupDialog({required this.courses});
+  const _CreateGroupDialog({required this.courses, required this.onSubmit});
 
   final List<_GroupCourseOption> courses;
+  final Future<StudentStudyGroup> Function(_CreateGroupResult result) onSubmit;
 
   @override
   State<_CreateGroupDialog> createState() => _CreateGroupDialogState();
@@ -1046,6 +1092,8 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _chatLinkController = TextEditingController();
   String? _selectedCourseId;
+  bool _saving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -1060,20 +1108,48 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameController.text.trim();
     final courseId = _selectedCourseId;
     if (name.isEmpty || courseId == null) {
+      setState(() {
+        _errorMessage = 'Vui lòng nhập tên nhóm và chọn môn học.';
+      });
       return;
     }
-    Navigator.pop(
-      context,
-      _CreateGroupResult(
+
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      final group = await widget.onSubmit(
+        _CreateGroupResult(
         name: name,
         courseId: courseId,
         chatLink: _chatLinkController.text.trim(),
       ),
-    );
+      );
+      if (mounted) {
+        Navigator.pop(context, group);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = 'Không thể tạo nhóm lúc này.';
+      });
+    }
   }
 
   @override
@@ -1092,6 +1168,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
           children: [
             TextField(
               controller: _nameController,
+              enabled: !_saving,
               style: TextStyle(color: colors.text),
               decoration: const InputDecoration(labelText: 'Tên nhóm'),
             ),
@@ -1125,28 +1202,38 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
                     ),
                   )
                   .toList(),
-              onChanged: (value) => setState(() => _selectedCourseId = value),
+              onChanged: _saving
+                  ? null
+                  : (value) => setState(() => _selectedCourseId = value),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _chatLinkController,
+              enabled: !_saving,
               style: TextStyle(color: colors.text),
               decoration: const InputDecoration(labelText: 'Link nhóm chat'),
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _saving ? null : () => Navigator.pop(context),
           child: const Text('Hủy'),
         ),
         ElevatedButton(
-          onPressed: _submit,
+          onPressed: _saving ? null : _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: colors.primaryStrong,
           ),
-          child: Text('Tạo nhóm', style: TextStyle(color: colors.onPrimary)),
+          child: Text(
+            _saving ? 'Đang tạo...' : 'Tạo nhóm',
+            style: TextStyle(color: colors.onPrimary),
+          ),
         ),
       ],
     );
@@ -1157,12 +1244,16 @@ class _StudyGroupRoomPage extends StatefulWidget {
   const _StudyGroupRoomPage({
     required this.group,
     required this.studentApi,
+    required this.currentUserId,
     this.onViewAllNotifications,
+    this.onKanbanChanged,
   });
 
   final StudentStudyGroup group;
   final StudentApiService studentApi;
+  final String currentUserId;
   final VoidCallback? onViewAllNotifications;
+  final VoidCallback? onKanbanChanged;
 
   @override
   State<_StudyGroupRoomPage> createState() => _StudyGroupRoomPageState();
@@ -1172,6 +1263,14 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
   StudentKanbanBoardData? _board;
   bool _loadingBoard = true;
   String? _boardError;
+  bool _showAllTasksForLeader = true;
+
+  bool get _canViewAllTasks => _board?.myRole == 'TRUONG_NHOM';
+
+  bool _canSeeTask(StudentKanbanTask task) {
+    return (_canViewAllTasks && _showAllTasksForLeader) ||
+        task.assigneeId == widget.currentUserId;
+  }
 
   @override
   void initState() {
@@ -1293,8 +1392,10 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
                   context: context,
                   builder: (_) => StudentKanbanPage(
                     studentApi: widget.studentApi,
+                    currentUserId: widget.currentUserId,
                     initialGroupId: group.id,
                     onViewAllNotifications: widget.onViewAllNotifications,
+                    onKanbanChanged: widget.onKanbanChanged,
                   ),
                 ),
               );
@@ -1410,7 +1511,14 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     }
 
     final members = _board?.members ?? const <StudentKanbanMember>[];
-    final tasks = _board?.tasks ?? const <StudentKanbanTask>[];
+    final tasks = (_board?.tasks ?? const <StudentKanbanTask>[])
+        .where(_canSeeTask)
+        .toList();
+    final viewingAllTasks = _canViewAllTasks && _showAllTasksForLeader;
+    final taskSectionTitle = viewingAllTasks ? 'Task của nhóm' : 'Task của tôi';
+    final emptyTaskMessage = viewingAllTasks
+        ? 'Nhóm chưa có task nào.'
+        : 'Bạn chưa có task nào trong nhóm này.';
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -1505,11 +1613,15 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
             ),
           ),
         const SizedBox(height: 14),
+        if (_canViewAllTasks) ...[
+          _buildTaskScopeSelector(colors),
+          const SizedBox(height: 12),
+        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Task của nhóm (${tasks.length})',
+              '$taskSectionTitle (${tasks.length})',
               style: TextStyle(
                 color: colors.text,
                 fontSize: 15,
@@ -1524,8 +1636,10 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
                     context: context,
                     builder: (_) => StudentKanbanPage(
                       studentApi: widget.studentApi,
+                      currentUserId: widget.currentUserId,
                       initialGroupId: widget.group.id,
                       onViewAllNotifications: widget.onViewAllNotifications,
+                      onKanbanChanged: widget.onKanbanChanged,
                     ),
                   ),
                 );
@@ -1537,7 +1651,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
         const SizedBox(height: 6),
         if (tasks.isEmpty)
           Text(
-            'Nhóm chưa có task nào.',
+            emptyTaskMessage,
             style: TextStyle(color: colors.textSubtle),
           )
         else
@@ -1601,6 +1715,74 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildTaskScopeSelector(StudentThemeColors colors) {
+    final allTasks = _board?.tasks ?? const <StudentKanbanTask>[];
+    final myTaskCount = allTasks
+        .where((task) => task.assigneeId == widget.currentUserId)
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: colors.surfaceAlt.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          _buildTaskScopeOption(
+            colors: colors,
+            label: 'Của tôi',
+            count: myTaskCount,
+            selected: !_showAllTasksForLeader,
+            onTap: () => setState(() => _showAllTasksForLeader = false),
+          ),
+          _buildTaskScopeOption(
+            colors: colors,
+            label: 'Toàn nhóm',
+            count: allTasks.length,
+            selected: _showAllTasksForLeader,
+            onTap: () => setState(() => _showAllTasksForLeader = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskScopeOption({
+    required StudentThemeColors colors,
+    required String label,
+    required int count,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: selected ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: selected ? colors.primaryStrong : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '$label ($count)',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected ? colors.onPrimary : colors.textSubtle,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
