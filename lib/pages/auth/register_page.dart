@@ -94,6 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return AuthScaffold(
       child: Form(
         key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -319,12 +320,13 @@ class _RegisterPageState extends State<RegisterPage> {
     return (value) => value == null || value.trim().isEmpty ? message : null;
   }
 
+  final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   String? _validateEmail(String? value) {
     final text = value?.trim() ?? '';
     if (text.isEmpty) {
       return context.l10n.t('auth.validation.emailRequired');
     }
-    if (!text.contains('@')) {
+    if (!emailRegex.hasMatch(text)) {
       return context.l10n.t('auth.validation.emailInvalid');
     }
     return null;
