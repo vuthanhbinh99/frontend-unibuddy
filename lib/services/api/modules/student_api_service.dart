@@ -137,13 +137,162 @@ class StudentApiService {
       () => getGradeTranscript(),
       StudentGradeTranscriptData.empty(),
     );
+    final projects = await _loadPersonalKanbanProjects(user);
 
     return StudentHomeData.fromBackend(
       user: user,
       courseData: courses,
       scheduleData: schedules,
       gradeData: grades,
+      projects: projects,
     );
+  }
+
+  Future<List<Project>> _loadPersonalKanbanProjects(PublicUser user) async {
+    final groups = await _fallback(
+      () => listStudyGroups(),
+      const StudentStudyGroupData(
+        message: 'Chưa có nhóm học tập.',
+        items: [],
+      ),
+    );
+    if (groups.items.isEmpty) {
+      return const [];
+    }
+
+    final projects = <Project>[];
+    final boardResults = await Future.wait(
+      groups.items.map((group) async {
+        try {
+          final board = await getKanbanBoard(group.id);
+          return (group: group, board: board);
+        } catch (_) {
+          return (group: group, board: null);
+        }
+      }),
+    );
+
+    for (final result in boardResults) {
+      final board = result.board;
+      if (board == null) {
+        continue;
+      }
+      final group = result.group;
+      final personalTasks =
+          board.tasks
+              .where(
+                (task) =>
+                    task.assigneeId == user.id &&
+                    _shouldShowKanbanTaskOnHome(task),
+              )
+              .toList()
+            ..sort(_compareKanbanTasksForHome);
+      for (final task in personalTasks) {
+        projects.add(
+          Project(
+            name: task.title,
+            subject: _kanbanTaskSubject(group, task),
+            icon: _kanbanProjectIcon(task.status),
+            color: _kanbanProjectColor(task.status),
+            role: group.role.value,
+            progress: _kanbanTaskProgress(task.status),
+          ),
+        );
+      }
+    }
+
+    return projects;
+  }
+
+  bool _shouldShowKanbanTaskOnHome(StudentKanbanTask task) {
+    return task.status == StudentKanbanStatus.todo ||
+        task.status == StudentKanbanStatus.doing;
+  }
+
+  int _compareKanbanTasksForHome(
+    StudentKanbanTask left,
+    StudentKanbanTask right,
+  ) {
+    final statusComparison = _kanbanTaskSortWeight(
+      left.status,
+    ).compareTo(_kanbanTaskSortWeight(right.status));
+    if (statusComparison != 0) {
+      return statusComparison;
+    }
+
+    final leftDue = left.dueDate;
+    final rightDue = right.dueDate;
+    if (leftDue != null && rightDue != null) {
+      return leftDue.compareTo(rightDue);
+    }
+    if (leftDue != null) {
+      return -1;
+    }
+    if (rightDue != null) {
+      return 1;
+    }
+
+    return left.title.compareTo(right.title);
+  }
+
+  int _kanbanTaskSortWeight(StudentKanbanStatus status) {
+    switch (status) {
+      case StudentKanbanStatus.overdue:
+        return 0;
+      case StudentKanbanStatus.doing:
+        return 1;
+      case StudentKanbanStatus.todo:
+        return 2;
+      case StudentKanbanStatus.done:
+        return 3;
+    }
+  }
+
+  String _kanbanTaskSubject(
+    StudentStudyGroup group,
+    StudentKanbanTask task,
+  ) {
+    final groupName = group.name.trim().isEmpty ? 'Nhóm học tập' : group.name;
+    return '${group.courseLabel} • $groupName • ${task.status.label}';
+  }
+
+  String _kanbanProjectIcon(StudentKanbanStatus status) {
+    switch (status) {
+      case StudentKanbanStatus.doing:
+        return 'Laptop';
+      case StudentKanbanStatus.done:
+        return 'BookOpen';
+      case StudentKanbanStatus.overdue:
+        return 'Cpu';
+      case StudentKanbanStatus.todo:
+        return 'Globe';
+    }
+  }
+
+  String _kanbanProjectColor(StudentKanbanStatus status) {
+    switch (status) {
+      case StudentKanbanStatus.doing:
+        return 'sky';
+      case StudentKanbanStatus.done:
+        return 'emerald';
+      case StudentKanbanStatus.overdue:
+        return 'rose';
+      case StudentKanbanStatus.todo:
+        return 'indigo';
+    }
+  }
+
+  int _kanbanTaskProgress(StudentKanbanStatus status) {
+    switch (status) {
+      case StudentKanbanStatus.todo:
+        return 0;
+      case StudentKanbanStatus.doing:
+        return 50;
+      case StudentKanbanStatus.done:
+        return 100;
+      case StudentKanbanStatus.overdue:
+        return 25;
+    }
   }
 
   Map<String, Object?> _withoutNulls(Map<String, Object?> input) {
