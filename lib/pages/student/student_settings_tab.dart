@@ -63,6 +63,15 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     _loadFlashcardReminderPreference();
   }
 
+  Future<void> _refreshSettings() async {
+    await Future.wait([
+      _loadSessions(),
+      _loadAppNotificationPreference(),
+      _loadDeadlineReminderPreference(),
+      _loadFlashcardReminderPreference(),
+    ]);
+  }
+
   Future<void> _loadAppNotificationPreference() async {
     try {
       final enabled = await widget.studentApi.getAppNotificationPreference();
@@ -382,10 +391,12 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          children: [
+        child: RefreshIndicator(
+          onRefresh: _refreshSettings,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            children: [
             Text(
               l10n.t('student.settings.title'),
               style: TextStyle(
@@ -942,7 +953,8 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
                 fontSize: 10,
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
