@@ -459,7 +459,9 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   late final AnimationController _flipController;
   late final Animation<double> _flipAnimation;
   List<StudentFlashcardCard> _cards = [];
-  int _currentIndex = 0;
+  final List<StudentFlashcardCard> _sessionQueue = [];
+  int _initialSessionCardCount = 0;
+  int _completedUniqueCardCount = 0;
   bool _isFlipped = false;
   bool _loading = true;
   bool _savingProgress = false;
@@ -471,7 +473,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   DateTime? _cardShownAt;
   String? _selectedQuizOption;
   bool _quizAnswered = false;
-  final Map<String, int> _soLanLamLai = {};
+  final Set<String> _cardsPenalizedThisSession = {};
   bool _sessionResultSent = false;
   bool _aiOverlayOpen = false;
 
@@ -495,17 +497,19 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   }
 
   StudentFlashcardCard? get _currentCard {
-    if (_currentIndex < 0 || _currentIndex >= _cards.length) {
+    if (_sessionQueue.isEmpty) {
       return null;
     }
-    return _cards[_currentIndex];
+    return _sessionQueue.first;
   }
 
   double get _progressPercent {
-    if (_cards.isEmpty) {
+    if (_initialSessionCardCount == 0) {
       return 0;
     }
-    return (_currentIndex / _cards.length).clamp(0, 1).toDouble();
+    return (_completedUniqueCardCount / _initialSessionCardCount)
+        .clamp(0, 1)
+        .toDouble();
   }
 
   Future<void> _loadReview({bool silent = false, bool hocLai = false}) async {
@@ -526,16 +530,20 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
       }
       setState(() {
         _cards = data.items;
-        _currentIndex = 0;
+        _sessionQueue
+          ..clear()
+          ..addAll(data.items);
+        _initialSessionCardCount = data.items.length;
+        _completedUniqueCardCount = 0;
         _isFlipped = false;
         _loading = false;
         _errorMessage = null;
-        _soLanLamLai.clear();
         _sessionResultSent = false;
         _totalStudied = 0;
         _forgotCount = 0;
         _reviewCount = 0;
         _masteredCount = 0;
+        _cardsPenalizedThisSession.clear();
         _resetCardState();
       });
       _flipController.reset();
@@ -581,10 +589,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
 
     setState(() => _savingProgress = true);
     try {
-      await widget.studentApi.updateFlashcardProgress(
-        cardId: card.id,
-        memoryLevel: level,
-      );
+      await _syncMemoryLevel(card, level);
       if (!mounted) {
         return;
       }
@@ -598,6 +603,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
             break;
           case StudentFlashcardMemoryLevel.review:
             _reviewCount++;
+            _requeueCard(card);
             break;
           case StudentFlashcardMemoryLevel.mastered:
             _masteredCount++;
@@ -616,6 +622,51 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  Future<void> _syncMemoryLevel(
+    StudentFlashcardCard card,
+    StudentFlashcardMemoryLevel level,
+  ) async {
+    final isMastered = level == StudentFlashcardMemoryLevel.mastered;
+    if (!isMastered && _cardsPenalizedThisSession.contains(card.id)) {
+      return;
+    }
+
+    await widget.studentApi.updateFlashcardProgress(
+      cardId: card.id,
+      memoryLevel: level,
+    );
+
+    if (isMastered) {
+      _cardsPenalizedThisSession.remove(card.id);
+    } else {
+      _cardsPenalizedThisSession.add(card.id);
+    }
+  }
+
+  Future<void> _syncQuizResult(
+    StudentFlashcardCard card,
+    bool isCorrect,
+    int responseMs,
+  ) async {
+    if (!isCorrect && _cardsPenalizedThisSession.contains(card.id)) {
+      return;
+    }
+
+    await widget.studentApi.submitFlashcardResult(
+      cardId: card.id,
+      result: isCorrect
+          ? StudentFlashcardResult.correct
+          : StudentFlashcardResult.wrong,
+      responseMs: responseMs,
+    );
+
+    if (isCorrect) {
+      _cardsPenalizedThisSession.remove(card.id);
+    } else {
+      _cardsPenalizedThisSession.add(card.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final card = _currentCard;
@@ -624,33 +675,51 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 16),
-              _buildImportPanel(),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: _progressPercent,
-                  backgroundColor: colors.surfaceAlt,
-                  color: colors.primaryStrong,
-                  minHeight: 6,
+        child: RefreshIndicator(
+          onRefresh: () => _loadReview(silent: true),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 16),
+                          _buildImportPanel(),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: _progressPercent,
+                              backgroundColor: colors.surfaceAlt,
+                              color: colors.primaryStrong,
+                              minHeight: 6,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Expanded(child: _buildCardArea(card)),
+                          const SizedBox(height: 24),
+                          if (card != null && !card.isQuiz)
+                            _buildControls()
+                          else
+                            const SizedBox.shrink(),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(child: _buildCardArea(card)),
-              const SizedBox(height: 24),
-              if (card != null && !card.isQuiz)
-                _buildControls()
-              else
-                const SizedBox.shrink(),
-              const SizedBox(height: 12),
-            ],
+              );
+            },
           ),
         ),
       ),
@@ -766,7 +835,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
                   ),
                 ),
                 Text(
-                  'Thẻ ${_cards.isEmpty ? 0 : (_currentIndex < _cards.length ? _currentIndex + 1 : _cards.length)} / ${_cards.length}',
+                  'Còn ${_sessionQueue.length} / $_initialSessionCardCount',
                   style: TextStyle(fontSize: 12, color: colors.textMuted),
                 ),
               ],
@@ -898,13 +967,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     });
 
     try {
-      await widget.studentApi.submitFlashcardResult(
-        cardId: card.id,
-        result: isCorrect
-            ? StudentFlashcardResult.correct
-            : StudentFlashcardResult.wrong,
-        responseMs: responseMs,
-      );
+      await _syncQuizResult(card, isCorrect, responseMs);
       if (!mounted) {
         return;
       }
@@ -918,11 +981,6 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
         }
         _savingProgress = false;
       });
-      // Lộ đáp án: tự động lật sang mặt sau sau khi đã chấm.
-      if (!_isFlipped) {
-        _flipController.forward();
-        setState(() => _isFlipped = true);
-      }
       await widget.onDeckChanged?.call();
     } on ApiException catch (error) {
       if (mounted) {
@@ -1168,9 +1226,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
               onPressed: _savingProgress ? null : _nextCard,
               icon: const Icon(Icons.arrow_forward),
               label: Text(
-                _currentIndex + 1 >= _cards.length
-                    ? 'Hoàn thành'
-                    : 'Câu tiếp theo',
+                _sessionQueue.length <= 1 ? 'Hoàn thành' : 'Câu tiếp theo',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primaryStrong,
@@ -1309,15 +1365,22 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
           ),
           if (coHocThe) ...[
             const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            Wrap(
+              alignment: WrapAlignment.spaceAround,
+              runSpacing: 14,
+              spacing: 12,
               children: [
-                _StudyStatItem('Đúng', _masteredCount, const Color(0xFF4ADE80)),
-                _StudyStatItem('Sai', _forgotCount, const Color(0xFFFF6B6B)),
-                _StudyStatItem('Tổng', _totalStudied, colors.primaryStrong),
+                _StudyStatItem('Quên', _forgotCount, const Color(0xFFFF6B6B)),
+                _StudyStatItem('Ôn tập', _reviewCount, Colors.amber),
+                _StudyStatItem(
+                  'Đã thuộc',
+                  _masteredCount,
+                  const Color(0xFF4ADE80),
+                ),
+                _StudyStatItem('Lượt', _totalStudied, colors.primaryStrong),
               ],
             ),
-            if (_forgotCount > 0) ...[
+            if (_forgotCount > 0 || _reviewCount > 0) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -1338,8 +1401,8 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Các thẻ làm sai đã được đưa lại để bạn ôn; '
-                        'xem chi tiết ở chuông thông báo.',
+                        'Các thẻ Quên hoặc Ôn tập đã được đưa lại cuối phiên. '
+                        'Lịch ôn dài hạn sẽ được SM-2 tự động cập nhật.',
                         style: TextStyle(color: colors.text, fontSize: 12),
                       ),
                     ),
@@ -1368,15 +1431,22 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   }
 
   Widget _buildControls() {
+    final colors = StudentThemeScope.colorsOf(context);
+
     return Row(
       children: [
         Expanded(
           child: _buildActionButton(
             label: 'Quên',
             icon: Icons.close,
-            color: const Color(0xFFFFB4AB),
-            bgColor: const Color(0xFF93000A).withValues(alpha: 0.2),
-            onTap: () => _handleAction(StudentFlashcardMemoryLevel.forgot),
+            color: colors.danger,
+            bgColor: colors.tint(
+              colors.danger,
+              lightAlpha: 0.12,
+              darkAlpha: 0.18,
+            ),
+            onTap: () =>
+                _handleAction(StudentFlashcardMemoryLevel.forgot),
           ),
         ),
         const SizedBox(width: 12),
@@ -1384,9 +1454,14 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
           child: _buildActionButton(
             label: 'Ôn tập',
             icon: Icons.rotate_left,
-            color: Colors.amber,
-            bgColor: Colors.amber.withValues(alpha: 0.15),
-            onTap: () => _handleAction(StudentFlashcardMemoryLevel.review),
+            color: colors.warning,
+            bgColor: colors.tint(
+              colors.warning,
+              lightAlpha: 0.14,
+              darkAlpha: 0.18,
+            ),
+            onTap: () =>
+                _handleAction(StudentFlashcardMemoryLevel.review),
           ),
         ),
         const SizedBox(width: 12),
@@ -1394,9 +1469,14 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
           child: _buildActionButton(
             label: 'Đã thuộc',
             icon: Icons.check,
-            color: const Color(0xFF4ADE80),
-            bgColor: const Color(0xFF4ADE80).withValues(alpha: 0.15),
-            onTap: () => _handleAction(StudentFlashcardMemoryLevel.mastered),
+            color: colors.success,
+            bgColor: colors.tint(
+              colors.success,
+              lightAlpha: 0.12,
+              darkAlpha: 0.18,
+            ),
+            onTap: () =>
+                _handleAction(StudentFlashcardMemoryLevel.mastered),
           ),
         ),
       ],
@@ -1410,42 +1490,52 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     required Color bgColor,
     required VoidCallback onTap,
   }) {
+    final colors = StudentThemeScope.colorsOf(context);
     return InkWell(
-      onTap: _savingProgress ? null : onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            if (_savingProgress)
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-              )
-            else
-              Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
+        onTap: _savingProgress ? null : onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: color.withValues(
+                alpha: colors.isLight ? 0.40 : 0.25,
               ),
+              width: 1.2,
             ),
-          ],
+          ),
+          child: Column(
+            children: [
+              if (_savingProgress)
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                )
+              else
+                Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _importCards() async {
@@ -1792,14 +1882,9 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   }
 
   void _requeueCard(StudentFlashcardCard card) {
-    // Đưa thẻ làm sai quay lại cuối phiên; giới hạn mỗi thẻ tối đa 1 lần
-    // để tránh phiên học kéo dài vô hạn khi liên tục trả lời sai.
-    final soLan = _soLanLamLai[card.id] ?? 0;
-    if (soLan >= 1) {
-      return;
-    }
-    _soLanLamLai[card.id] = soLan + 1;
-    _cards.add(card);
+    // Trong phiên học, thẻ chưa thuộc quay lại cuối hàng đợi để ôn ngay,
+    // còn lịch ôn dài hạn vẫn do SM-2 phía backend quyết định.
+    _sessionQueue.add(card);
   }
 
   Future<void> _recordSessionResult() async {
@@ -1830,12 +1915,22 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
       _isFlipped = false;
     }
 
+    final currentCard = _currentCard;
+    if (currentCard == null) {
+      return;
+    }
+    final shouldRequeue = _sessionQueue.length > 1 &&
+        identical(_sessionQueue.last, currentCard);
+
     setState(() {
-      _currentIndex++;
+      _sessionQueue.removeAt(0);
+      if (!shouldRequeue) {
+        _completedUniqueCardCount++;
+      }
       _resetCardState();
     });
 
-    if (_currentIndex >= _cards.length) {
+    if (_sessionQueue.isEmpty) {
       _showSnack('Chúc mừng! Bạn đã hoàn thành lượt học bộ thẻ này.');
       _recordSessionResult();
     }
@@ -1874,7 +1969,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _StudyStatItem(
-                    'Tổng số',
+                    'Lượt học',
                     _totalStudied,
                     colors.primaryStrong,
                   ),
