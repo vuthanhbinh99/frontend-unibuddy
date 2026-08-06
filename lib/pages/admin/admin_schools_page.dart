@@ -101,42 +101,34 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
   }
 
   Future<void> _openSchoolDialog({AdminSchool? school}) async {
-    final input = await showDialog<_SchoolInput>(
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => _SchoolDialog(school: school),
+      builder: (context) => _SchoolDialog(
+        school: school,
+        onSubmit: (input) async {
+          final code = input.code.toUpperCase();
+          setState(() => _busyCode = code);
+          try {
+            if (school == null) {
+              await widget.api.createSchool(code: code, name: input.name);
+            } else {
+              await widget.api.updateSchool(code: code, name: input.name);
+            }
+          } finally {
+            if (mounted) {
+              setState(() => _busyCode = null);
+            }
+          }
+        },
+      ),
     );
 
-    if (input == null) {
+    if (saved != true || !mounted) {
       return;
     }
 
-    final code = input.code.toUpperCase();
-    setState(() => _busyCode = code);
-
-    try {
-      if (school == null) {
-        await widget.api.createSchool(code: code, name: input.name);
-      } else {
-        await widget.api.updateSchool(code: code, name: input.name);
-      }
-
-      if (!mounted) {
-        return;
-      }
-
-      await _refresh();
-      _showMessage(
-        school == null ? 'Đã thêm trường mới.' : 'Đã cập nhật trường.',
-      );
-    } on ApiException catch (error) {
-      _showError(error.message);
-    } catch (_) {
-      _showError('Không thể lưu thông tin trường.');
-    } finally {
-      if (mounted) {
-        setState(() => _busyCode = null);
-      }
-    }
+    await _refresh();
+    _showMessage(school == null ? 'Đã thêm trường mới.' : 'Đã cập nhật trường.');
   }
 
   void _openAcademicRules(AdminSchool school) {
@@ -417,9 +409,10 @@ class _SchoolCard extends StatelessWidget {
 }
 
 class _SchoolDialog extends StatefulWidget {
-  const _SchoolDialog({this.school});
+  const _SchoolDialog({this.school, required this.onSubmit});
 
   final AdminSchool? school;
+  final Future<void> Function(_SchoolInput input) onSubmit;
 
   @override
   State<_SchoolDialog> createState() => _SchoolDialogState();
@@ -429,6 +422,8 @@ class _SchoolDialogState extends State<_SchoolDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeController;
   late final TextEditingController _nameController;
+  bool _saving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -456,9 +451,13 @@ class _SchoolDialogState extends State<_SchoolDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_errorMessage != null) ...[
+                AdminInlineMessage(message: _errorMessage!),
+                const SizedBox(height: 12),
+              ],
               TextFormField(
                 controller: _codeController,
-                enabled: !isEditing,
+                enabled: !isEditing && !_saving,
                 textCapitalization: TextCapitalization.characters,
                 decoration: const InputDecoration(labelText: 'Mã trường'),
                 validator: (value) {
@@ -472,6 +471,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nameController,
+                enabled: !_saving,
                 decoration: const InputDecoration(labelText: 'Tên trường'),
                 validator: (value) {
                   if ((value ?? '').trim().isEmpty) {
@@ -486,26 +486,53 @@ class _SchoolDialogState extends State<_SchoolDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
           child: const Text('Hủy'),
         ),
         FilledButton(
-          onPressed: () {
-            if (!_formKey.currentState!.validate()) {
-              return;
-            }
-
-            Navigator.of(context).pop(
-              _SchoolInput(
-                code: _codeController.text.trim(),
-                name: _nameController.text.trim(),
-              ),
-            );
-          },
-          child: Text(isEditing ? 'Lưu' : 'Thêm'),
+          onPressed: _saving ? null : _submit,
+          child: Text(_saving ? 'Đang lưu...' : (isEditing ? 'Lưu' : 'Thêm')),
         ),
       ],
     );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.onSubmit(
+        _SchoolInput(
+          code: _codeController.text.trim(),
+          name: _nameController.text.trim(),
+        ),
+      );
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _saving = false;
+        _errorMessage = 'Không thể lưu thông tin trường.';
+      });
+    }
   }
 }
 
