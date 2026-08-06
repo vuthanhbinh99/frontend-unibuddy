@@ -156,6 +156,7 @@ class StudentKanbanTask {
     required this.dueDate,
     required this.position,
     required this.commentCount,
+    required this.comments,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -171,6 +172,7 @@ class StudentKanbanTask {
   final DateTime? dueDate;
   final int position;
   final int commentCount;
+  final List<StudentKanbanComment> comments;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -186,6 +188,7 @@ class StudentKanbanTask {
     Object? dueDate = _sentinel,
     int? position,
     int? commentCount,
+    List<StudentKanbanComment>? comments,
     Object? createdAt = _sentinel,
     Object? updatedAt = _sentinel,
   }) {
@@ -209,6 +212,7 @@ class StudentKanbanTask {
       dueDate: dueDate == _sentinel ? this.dueDate : dueDate as DateTime?,
       position: position ?? this.position,
       commentCount: commentCount ?? this.commentCount,
+      comments: comments ?? this.comments,
       createdAt: createdAt == _sentinel
           ? this.createdAt
           : createdAt as DateTime?,
@@ -219,6 +223,9 @@ class StudentKanbanTask {
   }
 
   factory StudentKanbanTask.fromJson(Map<String, dynamic> json) {
+    final rawComments = (json['binhLuan'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>();
+
     return StudentKanbanTask(
       id: json['maCongViec'] as String? ?? '',
       groupId: json['maNhom'] as String? ?? '',
@@ -231,6 +238,7 @@ class StudentKanbanTask {
       dueDate: _parseDate(json['hanHoanThanh']),
       position: (json['viTri'] as num?)?.toInt() ?? 0,
       commentCount: (json['soBinhLuan'] as num?)?.toInt() ?? 0,
+      comments: rawComments.map(StudentKanbanComment.fromJson).toList(),
       createdAt: _parseDate(json['createdAt']),
       updatedAt: _parseDate(json['updatedAt']),
     );
