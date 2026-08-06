@@ -8,6 +8,7 @@ import '../../models/student_note_models.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/modules/student_api_service.dart';
 import 'student_theme.dart';
+import 'widgets/student_inline_message.dart';
 import 'widgets/student_notification_dropdown.dart';
 
 class StudentNotesPage extends StatefulWidget {
@@ -1118,6 +1119,7 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
   late final TextEditingController _urlController;
   late final TextEditingController _sizeController;
   String _fileType = 'application/pdf';
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -1180,6 +1182,10 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
                 }
               },
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
           ],
         ),
       ),
@@ -1203,13 +1209,9 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
         uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https') ||
         size <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Vui lòng nhập tên file, URL http/https và dung lượng.',
-          ),
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Vui lòng nhập tên file, URL http/https và dung lượng.';
+      });
       return;
     }
 
@@ -1251,6 +1253,7 @@ class _AttachmentNoteDialogContentState
   late final TextEditingController _titleController;
   late final TextEditingController _urlController;
   late final TextEditingController _contentController;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -1293,6 +1296,10 @@ class _AttachmentNoteDialogContentState
               label: 'Nội dung',
               maxLines: 3,
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
           ],
         ),
       ),
@@ -1313,11 +1320,9 @@ class _AttachmentNoteDialogContentState
     if (title.isEmpty ||
         uri == null ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập tiêu đề và URL http/https.'),
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Vui lòng nhập tiêu đề và URL http/https.';
+      });
       return;
     }
 
