@@ -54,6 +54,43 @@ class SystemAdminSectionTitle extends StatelessWidget {
   }
 }
 
+class SystemAdminInlineMessage extends StatelessWidget {
+  const SystemAdminInlineMessage({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: systemAdminDanger.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: systemAdminDanger.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline, color: systemAdminDanger, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: systemAdminDanger,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SystemAdminCard extends StatelessWidget {
   const SystemAdminCard({
     super.key,
