@@ -18,6 +18,7 @@ class StudentCatalogTab extends StatelessWidget {
   const StudentCatalogTab({
     super.key,
     required this.data,
+    required this.currentUserId,
     required this.grades,
     required this.studentName,
     required this.studentMajor,
@@ -25,17 +26,20 @@ class StudentCatalogTab extends StatelessWidget {
     required this.onChangeTab,
     required this.onAcademicDataChanged,
     required this.onOpenExamManagement,
+    required this.onKanbanChanged,
     required this.onRefresh,
   });
 
   final StudentCourseData data;
   final StudentGradeTranscriptData grades;
   final String studentName;
+  final String currentUserId;
   final String studentMajor;
   final StudentApiService studentApi;
   final ValueChanged<int> onChangeTab;
   final Future<void> Function() onAcademicDataChanged;
   final VoidCallback onOpenExamManagement;
+  final VoidCallback onKanbanChanged;
   final Future<void> Function() onRefresh;
 
   @override
@@ -117,7 +121,9 @@ class StudentCatalogTab extends StatelessWidget {
               builder: (_) => StudentStudyGroupsPage(
                 studentApi: studentApi,
                 courses: data.items,
+                currentUserId: currentUserId,
                 onViewAllNotifications: openNotificationsFromPushedPage,
+                onKanbanChanged: onKanbanChanged,
               ),
             ),
           );
@@ -176,7 +182,9 @@ class StudentCatalogTab extends StatelessWidget {
               controller: themeController,
               builder: (_) => StudentKanbanPage(
                 studentApi: studentApi,
+                currentUserId: currentUserId,
                 onViewAllNotifications: openNotificationsFromPushedPage,
+                onKanbanChanged: onKanbanChanged,
               ),
             ),
           );
@@ -652,4 +660,3 @@ class _CategoryItem {
   final Color color;
   final VoidCallback action;
 }
-
