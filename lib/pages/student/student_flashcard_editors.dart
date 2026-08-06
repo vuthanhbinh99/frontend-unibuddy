@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/student_flashcard_models.dart';
 import 'student_theme.dart';
+import 'widgets/student_inline_message.dart';
 
 /// Dữ liệu người dùng nhập cho một thẻ tự luận (nhập tay thủ công).
 class StudentFlashcardEssayDraft {
@@ -116,6 +117,7 @@ class _EssayEditorSheet extends StatefulWidget {
 class _EssayEditorSheetState extends State<_EssayEditorSheet> {
   late final TextEditingController _frontController;
   late final TextEditingController _backController;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -135,12 +137,9 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
     final front = _frontController.text.trim();
     final back = _backController.text.trim();
     if (front.isEmpty || back.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập cả mặt trước và mặt sau.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      setState(() {
+        _errorMessage = 'Vui lòng nhập cả mặt trước và mặt sau.';
+      });
       return;
     }
     Navigator.pop(
@@ -183,6 +182,10 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
               fontWeight: FontWeight.bold,
             ),
           ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 12),
+            StudentInlineMessage(message: _errorMessage!),
+          ],
           const SizedBox(height: 14),
           TextField(
             controller: _frontController,
@@ -242,6 +245,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
   late final TextEditingController _explanationController;
   final List<_QuizOptionField> _options = [];
   String? _correctAnswer;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -353,9 +357,9 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
   }
 
   void _warn(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
+    setState(() {
+      _errorMessage = message;
+    });
   }
 
   @override
@@ -393,6 +397,10 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              StudentInlineMessage(message: _errorMessage!),
+            ],
             const SizedBox(height: 14),
             TextField(
               controller: _questionController,
