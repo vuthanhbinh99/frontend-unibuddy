@@ -133,6 +133,37 @@ class AuthSession {
       ),
     );
   }
+
+  AuthSession withTokens(AuthSessionTokens tokens) {
+    return AuthSession(
+      user: user,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
+    );
+  }
+}
+
+class AuthSessionTokens {
+  const AuthSessionTokens({
+    required this.accessToken,
+    required this.refreshToken,
+    required this.refreshTokenExpiresAt,
+  });
+
+  final String accessToken;
+  final String refreshToken;
+  final DateTime refreshTokenExpiresAt;
+
+  factory AuthSessionTokens.fromJson(Map<String, dynamic> json) {
+    return AuthSessionTokens(
+      accessToken: json['accessToken'] as String,
+      refreshToken: json['refreshToken'] as String,
+      refreshTokenExpiresAt: DateTime.parse(
+        json['refreshTokenExpiresAt'] as String,
+      ),
+    );
+  }
 }
 
 class AuthDeviceSession {

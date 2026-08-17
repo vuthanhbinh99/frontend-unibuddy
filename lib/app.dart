@@ -1,14 +1,12 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-
 import 'models/auth_models.dart';
 import 'l10n/app_localizations.dart';
 import 'pages/admin/admin_dashboard_page.dart';
 import 'pages/auth/forgot_password_page.dart';
 import 'pages/auth/login_page.dart';
 import 'pages/auth/register_page.dart';
-import 'pages/student/student_dashboard_page.dart';
+import 'pages/student/dashboard/student_dashboard_page.dart';
 import 'pages/system_admin/system_admin_dashboard_page.dart';
 import 'services/api/api_client.dart';
 import 'services/api/modules/admin_api_service.dart';
@@ -45,6 +43,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
     super.initState();
     _apiClient = ApiClient();
     _authApi = AuthApiService(_apiClient);
+    _apiClient.setTokenRefreshHandler(_refreshSession);
     _adminApi = AdminApiService(_apiClient);
     _studentApi = StudentApiService(_apiClient);
     _systemAdminApi = SystemAdminApiService(_apiClient);
@@ -78,8 +77,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   /// khỏi bộ nhớ. Ngôn ngữ thông báo bám theo ngôn ngữ đang chọn của app.
   Future<void> _restoreFlashcardReminder() async {
     try {
-      final enabled =
-          await _frontendPreferences.readFlashcardReminderEnabled();
+      final enabled = await _frontendPreferences.readFlashcardReminderEnabled();
       if (!enabled) {
         return;
       }
@@ -186,7 +184,7 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
       googleIdentityService: _googleIdentityService,
       fcmTokenProvider: () => _fcmToken,
       onLoginSuccess: (session) {
-        setState(() => _session = session);
+        _setAuthenticatedSession(session);
       },
       onRegisterTap: () {
         Navigator.of(navigatorContext).push(
@@ -240,6 +238,46 @@ class _UniBuddyAppState extends State<UniBuddyApp> {
   Future<void> _handleLanguageChanged(String code) async {
     await _localizationController.setLanguage(code);
     _studentApi.setAcceptLanguageCode(_localizationController.languageCode);
+  }
+
+  void _setAuthenticatedSession(AuthSession session) {
+    _apiClient.setAccessToken(session.accessToken);
+    setState(() => _session = session);
+  }
+
+  Future<bool> _refreshSession() async {
+    final currentSession = _session;
+    if (currentSession == null) {
+      _apiClient.setAccessToken(null);
+      return false;
+    }
+
+    try {
+      final tokens = await _authApi.refreshSession(
+        refreshToken: currentSession.refreshToken,
+        fcmToken: _fcmToken,
+        deviceType: 'flutter',
+      );
+
+      if (!mounted) {
+        return true;
+      }
+
+      final latestSession = _session;
+      if (latestSession?.refreshToken != currentSession.refreshToken) {
+        _apiClient.setAccessToken(latestSession?.accessToken);
+        return false;
+      }
+
+      setState(() => _session = currentSession.withTokens(tokens));
+      return true;
+    } catch (_) {
+      _apiClient.setAccessToken(null);
+      if (mounted) {
+        setState(() => _session = null);
+      }
+      return false;
+    }
   }
 
   Future<void> _logout() async {
@@ -306,8 +344,6 @@ class _AppLoadingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

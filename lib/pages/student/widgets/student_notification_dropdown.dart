@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-
 import '../../../models/student_notification_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/api/api_exception.dart';
 import '../../../services/api/modules/student_api_service.dart';
-import '../student_theme.dart';
+import '../theme/student_theme.dart';
 
 class StudentNotificationBell extends StatelessWidget {
   const StudentNotificationBell({

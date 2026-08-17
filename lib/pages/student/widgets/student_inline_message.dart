@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../student_theme.dart';
+import '../theme/student_theme.dart';
 
 class StudentInlineMessage extends StatelessWidget {
   const StudentInlineMessage({

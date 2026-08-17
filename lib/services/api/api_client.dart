@@ -1,9 +1,9 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import 'api_config.dart';
 import 'api_exception.dart';
+
+typedef TokenRefreshHandler = Future<bool> Function();
 
 class ApiClient {
   ApiClient({http.Client? httpClient, String baseUrl = ApiConfig.baseUrl})
@@ -14,9 +14,15 @@ class ApiClient {
   final String _baseUrl;
   String? _accessToken;
   String? _acceptLanguageCode;
+  TokenRefreshHandler? _tokenRefreshHandler;
+  Future<bool>? _tokenRefreshFuture;
 
   void setAccessToken(String? token) {
     _accessToken = token;
+  }
+
+  void setTokenRefreshHandler(TokenRefreshHandler? handler) {
+    _tokenRefreshHandler = handler;
   }
 
   void setAcceptLanguageCode(String? languageCode) {
@@ -40,6 +46,7 @@ class ApiClient {
     required List<int> bytes,
     required String filename,
     Map<String, String>? fields,
+    bool allowTokenRefresh = true,
   }) async {
     final request = http.MultipartRequest('POST', _buildUri(path, null));
     request.headers.addAll({
@@ -60,6 +67,22 @@ class ApiClient {
       final streamedResponse = await _httpClient.send(request);
       final response = await http.Response.fromStream(streamedResponse);
       return _decodeEnvelope(response);
+    } on ApiException catch (error) {
+      if (await _shouldRefreshAndRetry(
+        error,
+        path,
+        allowTokenRefresh: allowTokenRefresh,
+      )) {
+        return postMultipart(
+          path,
+          fileField: fileField,
+          bytes: bytes,
+          filename: filename,
+          fields: fields,
+          allowTokenRefresh: false,
+        );
+      }
+      rethrow;
     } on http.ClientException catch (error) {
       throw ApiException(
         code: 'NETWORK_ERROR',
@@ -87,6 +110,7 @@ class ApiClient {
     String path, {
     Map<String, String>? query,
     Map<String, Object?>? body,
+    bool allowTokenRefresh = true,
   }) async {
     final uri = _buildUri(path, query);
     final headers = <String, String>{
@@ -136,7 +160,24 @@ class ApiClient {
       );
     }
 
-    return _decodeEnvelope(response);
+    try {
+      return _decodeEnvelope(response);
+    } on ApiException catch (error) {
+      if (await _shouldRefreshAndRetry(
+        error,
+        path,
+        allowTokenRefresh: allowTokenRefresh,
+      )) {
+        return _send(
+          method,
+          path,
+          query: query,
+          body: body,
+          allowTokenRefresh: false,
+        );
+      }
+      rethrow;
+    }
   }
 
   Uri _buildUri(String path, Map<String, String>? query) {
@@ -180,6 +221,45 @@ class ApiClient {
       details: decoded,
       statusCode: response.statusCode,
     );
+  }
+
+  Future<bool> _shouldRefreshAndRetry(
+    ApiException error,
+    String path, {
+    required bool allowTokenRefresh,
+  }) async {
+    if (!allowTokenRefresh ||
+        error.statusCode != 401 ||
+        _accessToken == null ||
+        _tokenRefreshHandler == null ||
+        _isAuthSessionEndpoint(path)) {
+      return false;
+    }
+
+    return _refreshAccessToken();
+  }
+
+  bool _isAuthSessionEndpoint(String path) {
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return normalizedPath == '/auth/login' ||
+        normalizedPath == '/auth/google' ||
+        normalizedPath == '/auth/register' ||
+        normalizedPath == '/auth/refresh' ||
+        normalizedPath == '/auth/logout' ||
+        normalizedPath.startsWith('/auth/forgot-password');
+  }
+
+  Future<bool> _refreshAccessToken() {
+    final existingRefresh = _tokenRefreshFuture;
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+
+    final refresh = _tokenRefreshHandler!().whenComplete(() {
+      _tokenRefreshFuture = null;
+    });
+    _tokenRefreshFuture = refresh;
+    return refresh;
   }
 
   void close() {

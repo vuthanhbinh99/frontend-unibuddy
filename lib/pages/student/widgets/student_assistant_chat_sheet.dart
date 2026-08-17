@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../../../models/student_assistant_models.dart';
 import '../../../services/api/api_exception.dart';
 import '../../../services/api/modules/student_api_service.dart';
-import '../student_theme.dart';
+import '../theme/student_theme.dart';
 
 /// Bottom sheet hội thoại nhiều lượt với trợ lý học tập UniBuddy.
 ///
@@ -128,7 +127,9 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     final colors = StudentThemeScope.colorsOf(context);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,
@@ -281,7 +282,11 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
                           color: colors.onPrimary,
                         ),
                       )
-                    : Icon(Icons.send_rounded, color: colors.onPrimary, size: 20),
+                    : Icon(
+                        Icons.send_rounded,
+                        color: colors.onPrimary,
+                        size: 20,
+                      ),
               ),
             ),
           ),

@@ -60,6 +60,25 @@ class AuthApiService {
     return AuthenticatedLoginResult(session);
   }
 
+  Future<AuthSessionTokens> refreshSession({
+    required String refreshToken,
+    String? fcmToken,
+    String? deviceType,
+  }) async {
+    final data = await _apiClient.post(
+      '/auth/refresh',
+      body: _withoutNulls({
+        'refreshToken': refreshToken,
+        'fcmToken': fcmToken,
+        'deviceType': deviceType,
+      }),
+    );
+
+    final tokens = AuthSessionTokens.fromJson(data as Map<String, dynamic>);
+    _apiClient.setAccessToken(tokens.accessToken);
+    return tokens;
+  }
+
   Future<RegisterStudentResult> registerStudent({
     required String fullName,
     required String email,
