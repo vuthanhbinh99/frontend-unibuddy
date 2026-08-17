@@ -87,6 +87,10 @@ class PushNotificationService {
     }
   }
 
+  /// Khởi tạo local notification plugin và tạo các kênh Android cần dùng.
+  ///
+  /// Kênh quan trọng dùng cho FCM foreground; kênh nhắc hằng ngày dùng cho lịch
+  /// ôn flashcard cục bộ.
   Future<void> _initializeLocalNotifications() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
@@ -203,6 +207,10 @@ class PushNotificationService {
     return scheduled;
   }
 
+  /// Hiển thị notification local khi nhận FCM trong lúc app đang mở.
+  ///
+  /// Khi app foreground, hệ điều hành không luôn tự hiện thông báo từ FCM, nên
+  /// hàm này dựng local notification để người dùng vẫn thấy thông báo.
   void _showForegroundNotification(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) {
@@ -229,6 +237,7 @@ class PushNotificationService {
     );
   }
 
+  /// Chuyển payload notification cho UI xử lý điều hướng sau khi người dùng bấm.
   void _handleMessageTap(RemoteMessage message) {
     _onNotificationTap?.call(message.data);
   }

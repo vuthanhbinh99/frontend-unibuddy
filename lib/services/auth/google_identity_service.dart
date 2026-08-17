@@ -2,12 +2,20 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../api/core/api_exception.dart';
 
+/// Service phụ trách đăng nhập Google ở phía client.
+///
+/// File này chỉ lấy Google `idToken`. Việc tạo session UniBuddy vẫn nằm ở
+/// `AuthApiService.loginWithGoogle`, để luồng auth backend tập trung một chỗ.
 class GoogleIdentityService {
   GoogleIdentityService({GoogleSignIn? googleSignIn})
     : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
+  /// Client ID mặc định dùng khi build local nếu chưa truyền dart-define.
   static const _defaultServerClientId =
       '984633166938-ds33c3bbk7r1bc4l2rt5k40ei4vhnog7.apps.googleusercontent.com';
+
+  /// Có thể override bằng:
+  /// `--dart-define=GOOGLE_SERVER_CLIENT_ID=<server-client-id>`.
   static const _serverClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
     defaultValue: _defaultServerClientId,
@@ -16,6 +24,10 @@ class GoogleIdentityService {
   final GoogleSignIn _googleSignIn;
   Future<void>? _initializeFuture;
 
+  /// Mở Google Sign-In và trả về `idToken` để gửi về backend.
+  ///
+  /// Trả `null` khi người dùng chủ động hủy đăng nhập; các lỗi cấu hình hoặc
+  /// lỗi provider thật sẽ được đổi thành `ApiException` để UI hiển thị.
   Future<String?> signInAndGetIdToken() async {
     try {
       await _ensureInitialized();
@@ -60,6 +72,10 @@ class GoogleIdentityService {
     }
   }
 
+  /// Khởi tạo Google Sign-In một lần duy nhất.
+  ///
+  /// `_initializeFuture` giúp nhiều lần gọi liên tiếp dùng chung một tiến trình
+  /// initialize, tránh mở/khởi tạo provider lặp lại.
   Future<void> _ensureInitialized() {
     final serverClientId = _blankToNull(_serverClientId);
 
@@ -68,6 +84,7 @@ class GoogleIdentityService {
     );
   }
 
+  /// Chuẩn hóa chuỗi rỗng thành null trước khi truyền vào Google SDK.
   String? _blankToNull(String value) {
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
