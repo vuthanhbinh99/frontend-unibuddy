@@ -36,6 +36,7 @@ class SystemAdminSectionTitle extends StatelessWidget {
   final String title;
   final Widget? trailing;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -59,6 +60,7 @@ class SystemAdminInlineMessage extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -101,6 +103,7 @@ class SystemAdminCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final compact = systemAdminIsCompact(context);
@@ -143,6 +146,7 @@ class SystemAdminMetricCard extends StatelessWidget {
   final String? caption;
   final Color accent;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(
@@ -202,6 +206,7 @@ class SystemAdminMetricCard extends StatelessWidget {
 class SystemAdminLoading extends StatelessWidget {
   const SystemAdminLoading({super.key});
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -223,6 +228,7 @@ class SystemAdminEmptyState extends StatelessWidget {
   final IconData icon;
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(
@@ -247,6 +253,7 @@ class SystemAdminErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(

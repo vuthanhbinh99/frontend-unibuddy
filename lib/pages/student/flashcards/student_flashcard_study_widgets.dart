@@ -1,6 +1,7 @@
 part of 'student_flashcard_decks_page.dart';
 
 extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -40,6 +41,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open manage cards cho người dùng.
   Future<void> _openManageCards() async {
     await Navigator.push<void>(
       context,
@@ -59,6 +61,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     await widget.onDeckChanged?.call();
   }
 
+  /// Dựng phần giao diện build import panel cho màn hình hiện tại.
   Widget _buildImportPanel() {
     final colors = StudentThemeScope.colorsOf(context);
     return Column(
@@ -122,6 +125,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build ai generate button cho màn hình hiện tại.
   Widget _buildAiGenerateButton() {
     final colors = StudentThemeScope.colorsOf(context);
     return Padding(
@@ -160,6 +164,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build card area cho màn hình hiện tại.
   Widget _buildCardArea(StudentFlashcardCard? card) {
     final colors = StudentThemeScope.colorsOf(context);
     if (_loading) {
@@ -218,6 +223,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Xử lý sự kiện handle quiz answer từ người dùng hoặc hệ thống.
   Future<void> _handleQuizAnswer(
     StudentFlashcardCard card,
     String optionId,
@@ -265,6 +271,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Dựng phần giao diện build quiz flip area cho màn hình hiện tại.
   Widget _buildQuizFlipArea(StudentFlashcardCard card) {
     return GestureDetector(
       // Chỉ cho phép lật thủ công sau khi đã trả lời (tránh xem trước đáp án).
@@ -292,6 +299,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build quiz front cho màn hình hiện tại.
   Widget _buildQuizFront(StudentFlashcardCard card) {
     final colors = StudentThemeScope.colorsOf(context);
     final quiz = card.quizContent!;
@@ -358,11 +366,13 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build quiz back cho màn hình hiện tại.
   Widget _buildQuizBack(StudentFlashcardCard card) {
     final quiz = card.quizContent!;
     return SingleChildScrollView(child: _buildQuizExplanation(quiz));
   }
 
+  /// Dựng phần giao diện build quiz option cho màn hình hiện tại.
   Widget _buildQuizOption(
     StudentFlashcardCard card,
     StudentFlashcardQuizContent quiz,
@@ -447,6 +457,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build quiz explanation cho màn hình hiện tại.
   Widget _buildQuizExplanation(StudentFlashcardQuizContent quiz) {
     final colors = StudentThemeScope.colorsOf(context);
     final isCorrect = _selectedQuizOption == quiz.correctAnswer;
@@ -509,6 +520,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build card side cho màn hình hiện tại.
   Widget _buildCardSide({
     required String title,
     required String content,
@@ -601,6 +613,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build completed state cho màn hình hiện tại.
   Widget _buildCompletedState() {
     final colors = StudentThemeScope.colorsOf(context);
     final coHocThe = _totalStudied > 0;
@@ -699,6 +712,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build controls cho màn hình hiện tại.
   Widget _buildControls() {
     final colors = StudentThemeScope.colorsOf(context);
 
@@ -749,6 +763,7 @@ extension _StudentFlashcardStudyWidgets on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build action button cho màn hình hiện tại.
   Widget _buildActionButton({
     required String label,
     required IconData icon,

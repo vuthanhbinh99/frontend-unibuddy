@@ -42,6 +42,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
   bool _sessionResultSent = false;
   bool _aiOverlayOpen = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -55,12 +56,14 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     _loadReview();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _flipController.dispose();
     super.dispose();
   }
 
+  /// Xử lý thao tác update study state và đồng bộ kết quả với UI.
   void _updateStudyState(VoidCallback fn) {
     setState(fn);
   }
@@ -81,6 +84,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
         .toDouble();
   }
 
+  /// Tải hoặc lấy dữ liệu load review để cập nhật UI.
   Future<void> _loadReview({bool silent = false, bool hocLai = false}) async {
     if (!silent) {
       setState(() {
@@ -135,12 +139,14 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  /// Xử lý thao tác reset card state và đồng bộ kết quả với UI.
   void _resetCardState() {
     _cardShownAt = DateTime.now();
     _selectedQuizOption = null;
     _quizAnswered = false;
   }
 
+  /// Xử lý sự kiện toggle flip từ người dùng hoặc hệ thống.
   void _toggleFlip() {
     if (_isFlipped) {
       _flipController.reverse();
@@ -150,6 +156,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     setState(() => _isFlipped = !_isFlipped);
   }
 
+  /// Xử lý sự kiện handle action từ người dùng hoặc hệ thống.
   Future<void> _handleAction(StudentFlashcardMemoryLevel level) async {
     final card = _currentCard;
     if (card == null || _savingProgress) {
@@ -191,6 +198,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ sync memory level cho màn hình hiện tại.
   Future<void> _syncMemoryLevel(
     StudentFlashcardCard card,
     StudentFlashcardMemoryLevel level,
@@ -212,6 +220,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ sync quiz result cho màn hình hiện tại.
   Future<void> _syncQuizResult(
     StudentFlashcardCard card,
     bool isCorrect,
@@ -236,6 +245,7 @@ class _StudentFlashcardStudyPageState extends State<StudentFlashcardStudyPage>
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final card = _currentCard;

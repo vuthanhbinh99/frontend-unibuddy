@@ -28,12 +28,14 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   String? _errorMessage;
   String? _successMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _codeController.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -106,6 +108,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _loading) {
       return;
@@ -142,6 +145,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ resend cho màn hình hiện tại.
   Future<void> _resend() async {
     setState(() {
       _resending = true;

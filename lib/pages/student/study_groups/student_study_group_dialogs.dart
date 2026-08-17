@@ -14,12 +14,14 @@ class _JoinGroupDialogState extends State<_JoinGroupDialog> {
   bool _saving = false;
   String? _errorMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -71,6 +73,7 @@ class _JoinGroupDialogState extends State<_JoinGroupDialog> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     final inviteCode = _controller.text.trim();
     if (inviteCode.isEmpty) {
@@ -121,12 +124,14 @@ class _DeleteGroupPasswordDialogState
     extends State<_DeleteGroupPasswordDialog> {
   final TextEditingController _controller = TextEditingController();
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -177,12 +182,14 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
   bool _saving = false;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _selectedCourseId = widget.courses.isEmpty ? null : widget.courses.first.id;
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _nameController.dispose();
@@ -190,6 +197,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     super.dispose();
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     final name = _nameController.text.trim();
     final courseId = _selectedCourseId;
@@ -234,6 +242,7 @@ class _CreateGroupDialogState extends State<_CreateGroupDialog> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

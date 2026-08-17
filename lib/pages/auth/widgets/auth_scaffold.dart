@@ -7,6 +7,7 @@ class AuthScaffold extends StatelessWidget {
 
   final Widget child;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,6 +46,7 @@ class AuthHeader extends StatelessWidget {
   final String subtitle;
   final bool showBackButton;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -120,6 +122,7 @@ class AuthActionButton extends StatelessWidget {
   final bool loading;
   final IconData icon;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -146,6 +149,7 @@ class AuthMessage extends StatelessWidget {
   final String message;
   final AuthMessageKind kind;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final isError = kind == AuthMessageKind.error;
@@ -178,6 +182,7 @@ enum AuthMessageKind { error, success }
 class _AuthBackground extends StatelessWidget {
   const _AuthBackground();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(

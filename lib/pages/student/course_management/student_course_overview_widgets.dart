@@ -19,6 +19,7 @@ class _GpaDashboard extends StatelessWidget {
   final ValueChanged<double> onTargetGpaChanged;
   final ValueChanged<bool> onFormulaToggle;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -435,6 +436,7 @@ class _CourseCard extends StatelessWidget {
     return const Color(0xFF89CEFF);
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -611,6 +613,7 @@ class _CourseWarningChip extends StatelessWidget {
 
   final bool isAutoCreatedFromScheduleImport;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -656,6 +659,7 @@ class _MiniGradeTag extends StatelessWidget {
   final double grade;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

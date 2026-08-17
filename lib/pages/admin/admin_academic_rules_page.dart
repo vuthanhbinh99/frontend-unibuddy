@@ -28,12 +28,14 @@ class AdminAcademicRulesPage extends StatefulWidget {
 class _AdminAcademicRulesPageState extends State<AdminAcademicRulesPage> {
   late Future<AdminAcademicRules> _future;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = widget.api.getAcademicRules(widget.schoolCode);
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final rules = await widget.api.getAcademicRules(widget.schoolCode);
     if (!mounted) {
@@ -42,6 +44,7 @@ class _AdminAcademicRulesPageState extends State<AdminAcademicRulesPage> {
     setState(() => _future = Future.value(rules));
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -115,6 +118,7 @@ class _AdminAcademicRulesPageState extends State<AdminAcademicRulesPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -146,12 +150,14 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
   late List<_ScoreScaleRow> _rows;
   bool _saving = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _rows = widget.initial.map(_ScoreScaleRow.fromModel).toList();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     for (final row in _rows) {
@@ -160,16 +166,19 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
     super.dispose();
   }
 
+  /// Xử lý thao tác add row và đồng bộ kết quả với UI.
   void _addRow() {
     setState(() => _rows.add(_ScoreScaleRow.empty()));
   }
 
+  /// Xử lý thao tác remove row và đồng bộ kết quả với UI.
   void _removeRow(int index) {
     setState(() {
       _rows.removeAt(index).dispose();
     });
   }
 
+  /// Xử lý thao tác save và đồng bộ kết quả với UI.
   Future<void> _save() async {
     final levels = <AdminScoreScaleLevel>[];
 
@@ -216,6 +225,7 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -278,6 +288,7 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show message cho người dùng.
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -287,6 +298,7 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -300,6 +312,7 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
 class _ScoreScaleHeaderRow extends StatelessWidget {
   const _ScoreScaleHeaderRow();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(
@@ -328,6 +341,7 @@ class _ScoreScaleRowEditor extends StatelessWidget {
   final _ScoreScaleRow row;
   final VoidCallback onRemove;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -380,12 +394,14 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
   late List<_StandingRow> _rows;
   bool _saving = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _rows = widget.initial.map(_StandingRow.fromModel).toList();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     for (final row in _rows) {
@@ -394,16 +410,19 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
     super.dispose();
   }
 
+  /// Xử lý thao tác add row và đồng bộ kết quả với UI.
   void _addRow() {
     setState(() => _rows.add(_StandingRow.empty()));
   }
 
+  /// Xử lý thao tác remove row và đồng bộ kết quả với UI.
   void _removeRow(int index) {
     setState(() {
       _rows.removeAt(index).dispose();
     });
   }
 
+  /// Xử lý thao tác save và đồng bộ kết quả với UI.
   Future<void> _save() async {
     final standings = <AdminAcademicStanding>[];
 
@@ -448,6 +467,7 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -510,6 +530,7 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show message cho người dùng.
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -519,6 +540,7 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -532,6 +554,7 @@ class _AcademicStandingSectionState extends State<_AcademicStandingSection> {
 class _StandingHeaderRow extends StatelessWidget {
   const _StandingHeaderRow();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(
@@ -558,6 +581,7 @@ class _StandingRowEditor extends StatelessWidget {
   final _StandingRow row;
   final VoidCallback onRemove;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -596,6 +620,7 @@ class _SectionTitle extends StatelessWidget {
   final String title;
   final String subtitle;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -642,6 +667,7 @@ class _CompactField extends StatelessWidget {
   final TextEditingController controller;
   final bool capitalize;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return TextField(
@@ -711,6 +737,7 @@ class _ScoreScaleRow {
     );
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   void dispose() {
     diemTu.dispose();
     diemDen.dispose();
@@ -758,6 +785,7 @@ class _StandingRow {
     return AdminAcademicStanding(xepLoai: loai, gpaTu: tu, gpaDen: den);
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   void dispose() {
     xepLoai.dispose();
     gpaTu.dispose();

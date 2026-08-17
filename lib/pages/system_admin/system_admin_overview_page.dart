@@ -27,12 +27,14 @@ class SystemAdminOverviewPage extends StatefulWidget {
 class _SystemAdminOverviewPageState extends State<SystemAdminOverviewPage> {
   late Future<_OverviewData> _future;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = _load();
   }
 
+  /// Tải hoặc lấy dữ liệu load để cập nhật UI.
   Future<_OverviewData> _load() async {
     final storage = await widget.api.getStorageUsage();
     final users = await widget.api.listUsers();
@@ -47,12 +49,14 @@ class _SystemAdminOverviewPageState extends State<SystemAdminOverviewPage> {
     );
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final next = _load();
     setState(() => _future = next);
     await next;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_OverviewData>(
@@ -87,6 +91,7 @@ class _SystemAdminOverviewPageState extends State<SystemAdminOverviewPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -108,6 +113,7 @@ class _OverviewContent extends StatelessWidget {
   final VoidCallback onOpenLogs;
   final VoidCallback onOpenUsers;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final lockedUsers = data.users
@@ -244,6 +250,7 @@ class _QuickActions extends StatelessWidget {
   final VoidCallback onOpenLogs;
   final VoidCallback onOpenUsers;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -291,6 +298,7 @@ class _StorageRow extends StatelessWidget {
   final String label;
   final String value;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -309,6 +317,7 @@ class _LogPreview extends StatelessWidget {
 
   final AuditLogEntry log;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = levelColor(log.level);

@@ -28,6 +28,7 @@ class SystemAdminDashboardPage extends StatefulWidget {
 class _SystemAdminDashboardPageState extends State<SystemAdminDashboardPage> {
   int _selectedIndex = 0;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final titles = ['Tổng quan', 'Thông báo', 'Log', 'Người dùng'];
@@ -135,10 +136,12 @@ class _SystemAdminDashboardPageState extends State<SystemAdminDashboardPage> {
     );
   }
 
+  /// Xử lý sự kiện select tab từ người dùng hoặc hệ thống.
   void _selectTab(int index) {
     setState(() => _selectedIndex = index);
   }
 
+  /// Dựng phần giao diện build system admin light theme cho màn hình hiện tại.
   ThemeData _buildSystemAdminLightTheme() {
     final colorScheme =
         ColorScheme.fromSeed(

@@ -9,6 +9,7 @@ class _ScheduleViewSwitcher extends StatelessWidget {
   final _ScheduleViewMode selectedMode;
   final ValueChanged<_ScheduleViewMode> onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -61,6 +62,7 @@ class _ScheduleViewOption extends StatelessWidget {
   final _ScheduleViewMode selectedMode;
   final ValueChanged<_ScheduleViewMode> onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -118,6 +120,7 @@ class _ScheduleSemesterBar extends StatelessWidget {
   final String? selectedSemester;
   final ValueChanged<String?> onSemesterChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -208,6 +211,7 @@ class _ScheduleWeekSemesterBar extends StatelessWidget {
   final String? selectedSemester;
   final ValueChanged<String?> onSemesterChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

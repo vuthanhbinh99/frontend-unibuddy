@@ -50,12 +50,14 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _errorMessage;
   String? _successMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _loadSchools();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -69,6 +71,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -271,6 +274,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _loading) {
       return;
@@ -360,6 +364,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return null;
   }
 
+  /// Tải hoặc lấy dữ liệu load schools để cập nhật UI.
   Future<void> _loadSchools() async {
     setState(() {
       _loadingSchools = true;
@@ -390,6 +395,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open school picker cho người dùng.
   Future<void> _openSchoolPicker() async {
     if (_schools.isEmpty) {
       return;
@@ -447,12 +453,14 @@ class _SchoolAutocompleteFieldState extends State<_SchoolAutocompleteField> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _syncWithSelection();
   }
 
+  /// Đồng bộ state khi widget cha truyền cấu hình mới xuống.
   @override
   void didUpdateWidget(covariant _SchoolAutocompleteField oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -461,6 +469,7 @@ class _SchoolAutocompleteFieldState extends State<_SchoolAutocompleteField> {
     }
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _controller.dispose();
@@ -468,6 +477,7 @@ class _SchoolAutocompleteFieldState extends State<_SchoolAutocompleteField> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final title = textOrFallback(
@@ -598,6 +608,7 @@ class _SchoolAutocompleteFieldState extends State<_SchoolAutocompleteField> {
     );
   }
 
+  /// Hàm hỗ trợ sync with selection cho màn hình trong file này.
   void _syncWithSelection() {
     final selectedSchool = widget.selectedSchool;
     if (selectedSchool == null) {
@@ -611,6 +622,7 @@ class _SchoolAutocompleteFieldState extends State<_SchoolAutocompleteField> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện display school cho người dùng.
   String _displaySchool(PublicSchool school) {
     return '${school.code} - ${school.name}';
   }
@@ -633,12 +645,14 @@ class _SchoolPickerSheetState extends State<_SchoolPickerSheet> {
   final _searchController = TextEditingController();
   String _query = '';
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final title = textOrFallback(

@@ -45,6 +45,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
   List<StudentStudyGroup> _groups = [];
   List<_GroupCourseOption> _courseOptions = [];
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -52,16 +53,19 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     _loadInitialData();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Tải hoặc lấy dữ liệu load initial data để cập nhật UI.
   Future<void> _loadInitialData() async {
     await Future.wait([_loadGroups(), _loadCourseOptions()]);
   }
 
+  /// Tải hoặc lấy dữ liệu load groups để cập nhật UI.
   Future<void> _loadGroups() async {
     setState(() {
       _loading = true;
@@ -95,6 +99,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu load course options để cập nhật UI.
   Future<void> _loadCourseOptions() async {
     if (_loadingCourses) {
       return;
@@ -119,6 +124,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     }
   }
 
+  /// Hàm hỗ trợ course options from schedules cho màn hình trong file này.
   List<_GroupCourseOption> _courseOptionsFromSchedules(
     List<StudentScheduleItem> schedules,
   ) {
@@ -134,6 +140,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
       ..sort((a, b) => a.displayName.compareTo(b.displayName));
   }
 
+  /// Hiển thị hoặc mở phần giao diện show create group dialog cho người dùng.
   Future<void> _showCreateGroupDialog() async {
     if (_courseOptions.isEmpty) {
       _showSnack(
@@ -168,6 +175,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     _showSnack('Đã tạo nhóm "${group.name}" thành công.');
   }
 
+  /// Hiển thị hoặc mở phần giao diện show join dialog cho người dùng.
   Future<void> _showJoinDialog() async {
     final group = await showDialog<StudentStudyGroup>(
       context: context,
@@ -186,6 +194,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     _showSnack('Đã tham gia nhóm "${group.name}".');
   }
 
+  /// Xử lý thao tác leave group và đồng bộ kết quả với UI.
   Future<void> _leaveGroup(StudentStudyGroup group) async {
     final confirmed = await _confirm(
       title: 'Rời nhóm',
@@ -212,6 +221,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     }
   }
 
+  /// Xử lý thao tác delete group và đồng bộ kết quả với UI.
   Future<void> _deleteGroup(StudentStudyGroup group) async {
     final password = await _askPassword();
     if (password == null || password.isEmpty) {
@@ -237,6 +247,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     }
   }
 
+  /// Xử lý thao tác confirm và đồng bộ kết quả với UI.
   Future<bool?> _confirm({
     required String title,
     required String message,
@@ -267,6 +278,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Thực hiện tác vụ bất đồng bộ ask password cho màn hình hiện tại.
   Future<String?> _askPassword() {
     return showDialog<String>(
       context: context,
@@ -274,6 +286,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open group room cho người dùng.
   void _openGroupRoom(StudentStudyGroup group) {
     Navigator.push(
       context,
@@ -290,12 +303,14 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -364,6 +379,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -402,6 +418,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build tabs cho màn hình hiện tại.
   Widget _buildTabs() {
     final colors = StudentThemeScope.colorsOf(context);
     return Container(
@@ -423,6 +440,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build tab button cho màn hình hiện tại.
   Widget _buildTabButton({required String id, required String label}) {
     final colors = StudentThemeScope.colorsOf(context);
     final active = _activeTab == id;
@@ -450,6 +468,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build search bar cho màn hình hiện tại.
   Widget _buildSearchBar() {
     final colors = StudentThemeScope.colorsOf(context);
     final hasQuery = _searchQuery.trim().isNotEmpty;
@@ -519,6 +538,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build category filters cho màn hình hiện tại.
   Widget _buildCategoryFilters() {
     final colors = StudentThemeScope.colorsOf(context);
     const filters = [
@@ -553,6 +573,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build my groups cho màn hình hiện tại.
   Widget _buildMyGroups(List<StudentStudyGroup> groups) {
     final colors = StudentThemeScope.colorsOf(context);
     return Column(
@@ -597,6 +618,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build discover cho màn hình hiện tại.
   Widget _buildDiscover() {
     final colors = StudentThemeScope.colorsOf(context);
     return Column(
@@ -616,6 +638,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build join invite card cho màn hình hiện tại.
   Widget _buildJoinInviteCard() {
     final colors = StudentThemeScope.colorsOf(context);
     return Container(
@@ -687,6 +710,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build error state cho màn hình hiện tại.
   Widget _buildErrorState() {
     final colors = StudentThemeScope.colorsOf(context);
     return Container(
@@ -711,6 +735,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build group card cho màn hình hiện tại.
   Widget _buildGroupCard(StudentStudyGroup group) {
     final colors = StudentThemeScope.colorsOf(context);
     final isLeader = group.isLeader;
@@ -869,6 +894,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Dựng phần giao diện build initials cho màn hình hiện tại.
   Widget _buildInitials(List<String> initials) {
     final colors = StudentThemeScope.colorsOf(context);
     final avatarColors = [colors.primaryStrong, colors.info, colors.danger];
@@ -901,6 +927,7 @@ class _StudentStudyGroupsPageState extends State<StudentStudyGroupsPage> {
     );
   }
 
+  /// Hàm hỗ trợ category for cho màn hình trong file này.
   String _categoryFor(StudentStudyGroup group) {
     final code = group.courseLabel.toLowerCase();
     if (code.contains('cs') ||

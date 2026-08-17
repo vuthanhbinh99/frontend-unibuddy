@@ -162,6 +162,7 @@ class PasswordStrengthGuidance extends StatelessWidget {
   final String password;
   final List<String> relatedValues;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final isVietnamese = context.l10n.languageCode == 'vi';
@@ -259,6 +260,7 @@ class PasswordStrengthGuidance extends StatelessWidget {
     );
   }
 
+  /// Dựng phần giao diện build rule column cho màn hình hiện tại.
   Widget _buildRuleColumn(BuildContext context, List<PasswordRuleCheck> rules) {
     final isVietnamese = context.l10n.languageCode == 'vi';
     final colors = Theme.of(context).colorScheme;
@@ -301,6 +303,7 @@ class _PasswordRuleTile extends StatelessWidget {
   final bool passed;
   final ColorScheme colors;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final activeColor = passed ? const Color(0xFF22C55E) : colors.outline;

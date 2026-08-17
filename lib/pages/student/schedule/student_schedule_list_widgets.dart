@@ -13,6 +13,7 @@ class _ScheduleListView extends StatelessWidget {
   final ValueChanged<StudentScheduleItem> onEdit;
   final ValueChanged<StudentScheduleItem> onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -61,6 +62,7 @@ class _ScheduleCourseGroup extends StatelessWidget {
   final ValueChanged<StudentScheduleItem> onEdit;
   final ValueChanged<StudentScheduleItem> onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -162,6 +164,7 @@ class _ScheduleCourseGroupSession extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -269,6 +272,7 @@ class _ScheduleCompactBadge extends StatelessWidget {
   final String label;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

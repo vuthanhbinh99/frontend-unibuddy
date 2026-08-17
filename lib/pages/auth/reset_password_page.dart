@@ -28,6 +28,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _passwordController.dispose();
@@ -35,6 +36,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -99,6 +101,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _loading) {
       return;

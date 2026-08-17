@@ -11,6 +11,7 @@ class _DaySelector extends StatelessWidget {
   final List<_DayOption> days;
   final ValueChanged<int> onSelected;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -79,6 +80,7 @@ class _ScheduleCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -266,6 +268,7 @@ class _ScheduleMeta extends StatelessWidget {
   final IconData icon;
   final String text;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -297,6 +300,7 @@ class _EmptySchedule extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -321,6 +325,7 @@ class _WarningBanner extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

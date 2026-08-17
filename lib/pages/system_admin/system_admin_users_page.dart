@@ -27,18 +27,21 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
   ManagedUserStatus? _statusFilter;
   String? _busyUserId;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = widget.api.listUsers();
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final next = widget.api.listUsers();
     setState(() => _future = next);
     await next;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<ManagedUser>>(
@@ -87,6 +90,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     );
   }
 
+  /// Sắp xếp hoặc lọc dữ liệu filter users trước khi hiển thị.
   List<ManagedUser> _filterUsers(List<ManagedUser> users) {
     final normalizedQuery = _query.trim().toLowerCase();
 
@@ -106,6 +110,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     }).toList();
   }
 
+  /// Hiển thị hoặc mở phần giao diện open create user dialog cho người dùng.
   Future<void> _openCreateUserDialog() async {
     final result = await showDialog<CreateManagedUserResult>(
       context: context,
@@ -140,6 +145,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     _refresh().catchError((_) {});
   }
 
+  /// Xử lý thao tác update status và đồng bộ kết quả với UI.
   Future<void> _updateStatus(ManagedUser user, ManagedUserStatus status) async {
     setState(() => _busyUserId = user.id);
 
@@ -191,10 +197,12 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ issue temporary password cho màn hình hiện tại.
   Future<void> _issueTemporaryPassword(ManagedUser user) {
     return _updateStatus(user, ManagedUserStatus.passwordChangeRequired);
   }
 
+  /// Xử lý thao tác update role và đồng bộ kết quả với UI.
   Future<void> _updateRole(ManagedUser user, UserRoleCode roleCode) async {
     setState(() => _busyUserId = user.id);
 
@@ -235,6 +243,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show temporary password cho người dùng.
   void _showTemporaryPassword({
     required String userName,
     required String password,
@@ -268,6 +277,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -278,6 +288,7 @@ class _SystemAdminUsersPageState extends State<SystemAdminUsersPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -291,6 +302,7 @@ class _UsersHeader extends StatelessWidget {
 
   final VoidCallback onCreateUser;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final button = FilledButton.icon(
@@ -334,6 +346,7 @@ class _Filters extends StatelessWidget {
   final ValueChanged<UserRoleCode?> onRoleChanged;
   final ValueChanged<ManagedUserStatus?> onStatusChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(
@@ -434,6 +447,7 @@ class _UserList extends StatelessWidget {
   final void Function(ManagedUser user, UserRoleCode roleCode) onRoleChanged;
   final ValueChanged<ManagedUser> onTemporaryPasswordRequested;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     if (users.isEmpty) {
@@ -481,6 +495,7 @@ class _UserTile extends StatelessWidget {
   final void Function(ManagedUser user, UserRoleCode roleCode) onRoleChanged;
   final ValueChanged<ManagedUser> onTemporaryPasswordRequested;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = statusColor(user.status);
@@ -605,6 +620,7 @@ class _Pill extends StatelessWidget {
   final String label;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -643,6 +659,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   bool _saving = false;
   String? _errorMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -650,6 +667,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -728,6 +746,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;

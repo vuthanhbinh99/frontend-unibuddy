@@ -5,6 +5,7 @@ class _EmptyCourseState extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

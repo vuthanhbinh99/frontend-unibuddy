@@ -29,6 +29,7 @@ class StudentNotificationBell extends StatelessWidget {
   final Color dotColor;
   final EdgeInsetsGeometry margin;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -152,12 +153,14 @@ class _NotificationDropdownPanelState
   List<StudentNotificationItem> _items = [];
   bool _markingAll = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = _load();
   }
 
+  /// Tải hoặc lấy dữ liệu load để cập nhật UI.
   Future<StudentNotificationData> _load() async {
     final data = await widget.studentApi.listNotifications(limit: 6);
     if (mounted) {
@@ -166,12 +169,14 @@ class _NotificationDropdownPanelState
     return data;
   }
 
+  /// Thực hiện tác vụ bất đồng bộ retry cho màn hình hiện tại.
   Future<void> _retry() async {
     final next = _load();
     setState(() => _future = next);
     await next;
   }
 
+  /// Xử lý thao tác mark all as read và đồng bộ kết quả với UI.
   Future<void> _markAllAsRead() async {
     if (_markingAll || _items.isEmpty) {
       return;
@@ -193,6 +198,7 @@ class _NotificationDropdownPanelState
     }
   }
 
+  /// Xử lý thao tác mark as read và đồng bộ kết quả với UI.
   Future<void> _markAsRead(StudentNotificationItem item) async {
     if (!item.isRead) {
       setState(() {
@@ -213,6 +219,7 @@ class _NotificationDropdownPanelState
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
@@ -262,6 +269,7 @@ class _NotificationDropdownPanelState
     );
   }
 
+  /// Dựng phần giao diện build content cho màn hình hiện tại.
   Widget _buildContent(AsyncSnapshot<StudentNotificationData> snapshot) {
     final l10n = context.l10n;
     if (snapshot.connectionState == ConnectionState.waiting && _items.isEmpty) {
@@ -317,6 +325,7 @@ class _DropdownHeader extends StatelessWidget {
   final VoidCallback onMarkAll;
   final VoidCallback onClose;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -400,6 +409,7 @@ class _DropdownNotificationItem extends StatelessWidget {
   final StudentNotificationItem item;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -504,6 +514,7 @@ class _ViewAllButton extends StatelessWidget {
 
   final VoidCallback onPressed;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -529,6 +540,7 @@ class _ViewAllButton extends StatelessWidget {
 class _DropdownEmpty extends StatelessWidget {
   const _DropdownEmpty();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -562,6 +574,7 @@ class _DropdownError extends StatelessWidget {
   final String message;
   final Future<void> Function() onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

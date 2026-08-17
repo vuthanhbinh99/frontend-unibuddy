@@ -1,6 +1,7 @@
 part of 'student_dashboard_page.dart';
 
 extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
+  /// Xử lý thao tác import schedule và đồng bộ kết quả với UI.
   Future<void> _importSchedule() async {
     final l10n = context.l10n;
     if (_isImportingSchedule) {
@@ -158,6 +159,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show schedule import semester dialog cho người dùng.
   Future<_ScheduleImportSemesterChoice?> _showScheduleImportSemesterDialog({
     required StudentCourseData courses,
     required StudentScheduleData schedules,
@@ -323,6 +325,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show import preview dialog cho người dùng.
   Future<StudentScheduleImportPreviewData?> _showImportPreviewDialog(
     StudentScheduleImportHeadersData headers,
     StudentScheduleImportPreviewData preview, {
@@ -383,6 +386,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     return null;
   }
 
+  /// Hiển thị hoặc mở phần giao diện show import preview dialog step cho người dùng.
   Future<Object?> _showImportPreviewDialogStep(
     StudentScheduleImportHeadersData headers,
     StudentScheduleImportPreviewData preview, {
@@ -580,6 +584,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     );
   }
 
+  /// Xử lý thao tác add schedule manually và đồng bộ kết quả với UI.
   Future<void> _addScheduleManually() async {
     final l10n = context.l10n;
     if (_isSavingManualSchedule) {
@@ -651,6 +656,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     }
   }
 
+  /// Xử lý thao tác edit schedule và đồng bộ kết quả với UI.
   Future<void> _editSchedule(StudentScheduleItem item) async {
     final l10n = context.l10n;
     if (_isSavingManualSchedule) {
@@ -724,6 +730,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     }
   }
 
+  /// Xử lý thao tác delete schedule và đồng bộ kết quả với UI.
   Future<void> _deleteSchedule(StudentScheduleItem item) async {
     final l10n = context.l10n;
     final colors = _studentThemeController.colors;
@@ -812,6 +819,7 @@ extension _StudentDashboardScheduleActions on _StudentDashboardPageState {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show manual schedule dialog cho người dùng.
   Future<_ManualScheduleInput?> _showManualScheduleDialog(
     List<StudentCourseItem> courses, {
     StudentScheduleItem? initial,

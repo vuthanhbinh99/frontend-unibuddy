@@ -26,6 +26,7 @@ class AdminDashboardPage extends StatefulWidget {
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
   int _selectedIndex = 0;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final pages = [
@@ -122,6 +123,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
+  /// Xử lý sự kiện select tab từ người dùng hoặc hệ thống.
   void _selectTab(int index) {
     setState(() => _selectedIndex = index);
   }

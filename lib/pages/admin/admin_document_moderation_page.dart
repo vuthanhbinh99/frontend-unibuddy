@@ -24,12 +24,14 @@ class _AdminDocumentModerationPageState
   String? _busyReportId;
   String? _expandedReportId;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = _load();
   }
 
+  /// Tải hoặc lấy dữ liệu load để cập nhật UI.
   Future<_ModerationData> _load() async {
     final pending = await widget.api.listReports(
       status: AdminReportStatus.pending,
@@ -47,12 +49,14 @@ class _AdminDocumentModerationPageState
     );
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final next = _load();
     setState(() => _future = next);
     await next;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ModerationData>(
@@ -133,6 +137,7 @@ class _AdminDocumentModerationPageState
     );
   }
 
+  /// Sắp xếp hoặc lọc dữ liệu filter reports trước khi hiển thị.
   List<AdminDocumentReport> _filterReports(List<AdminDocumentReport> reports) {
     final normalizedQuery = _query.trim().toLowerCase();
     return reports.where((report) {
@@ -152,12 +157,14 @@ class _AdminDocumentModerationPageState
     }).toList();
   }
 
+  /// Xử lý sự kiện toggle expanded từ người dùng hoặc hệ thống.
   void _toggleExpanded(String reportId) {
     setState(() {
       _expandedReportId = _expandedReportId == reportId ? null : reportId;
     });
   }
 
+  /// Xử lý thao tác confirm approve và đồng bộ kết quả với UI.
   Future<void> _confirmApprove(AdminDocumentReport report) async {
     final confirmed = await _confirmAction(
       title: 'Ẩn / xóa tài liệu?',
@@ -176,6 +183,7 @@ class _AdminDocumentModerationPageState
     }
   }
 
+  /// Xử lý thao tác confirm reject và đồng bộ kết quả với UI.
   Future<void> _confirmReject(AdminDocumentReport report) async {
     final confirmed = await _confirmAction(
       title: 'Bác bỏ báo cáo?',
@@ -194,6 +202,7 @@ class _AdminDocumentModerationPageState
     }
   }
 
+  /// Xử lý thao tác confirm action và đồng bộ kết quả với UI.
   Future<bool> _confirmAction({
     required String title,
     required String message,
@@ -224,6 +233,7 @@ class _AdminDocumentModerationPageState
     return result == true;
   }
 
+  /// Thực hiện tác vụ bất đồng bộ run moderation action cho màn hình hiện tại.
   Future<void> _runModerationAction({
     required String reportId,
     required Future<AdminDocumentReport> Function() action,
@@ -251,6 +261,7 @@ class _AdminDocumentModerationPageState
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show message cho người dùng.
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -260,6 +271,7 @@ class _AdminDocumentModerationPageState
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -269,6 +281,7 @@ class _AdminDocumentModerationPageState
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -300,6 +313,7 @@ class _ModerationFilters extends StatelessWidget {
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<String?> onFileTypeChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -376,6 +390,7 @@ class _TabButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = selected ? adminPrimary : adminMuted;
@@ -429,6 +444,7 @@ class _PendingReportCard extends StatelessWidget {
   final VoidCallback onReject;
   final VoidCallback onApprove;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -496,6 +512,7 @@ class _HistoryReportCard extends StatelessWidget {
 
   final AdminDocumentReport report;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = adminReportStatusColor(report.status);
@@ -544,6 +561,7 @@ class _ReportHeader extends StatelessWidget {
 
   final AdminDocumentReport report;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final statusColor = adminReportStatusColor(report.status);
@@ -614,6 +632,7 @@ class _ReasonBox extends StatelessWidget {
 
   final String reason;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -644,6 +663,7 @@ class _ReportDetails extends StatelessWidget {
 
   final AdminDocumentReport report;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -676,6 +696,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(

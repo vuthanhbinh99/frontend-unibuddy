@@ -47,6 +47,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
   final List<AssistantChatMessage> _messages = [];
   bool _isSending = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -56,6 +57,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     }
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _inputController.dispose();
@@ -63,6 +65,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     super.dispose();
   }
 
+  /// Xử lý thao tác send và đồng bộ kết quả với UI.
   Future<void> _send() async {
     final text = _inputController.text.trim();
     if (text.isEmpty || _isSending) {
@@ -109,6 +112,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     }
   }
 
+  /// Hàm hỗ trợ scroll to bottom cho màn hình trong file này.
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) {
@@ -122,6 +126,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     });
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -179,6 +184,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader(StudentThemeColors colors) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
@@ -228,6 +234,7 @@ class _StudentAssistantChatSheetState extends State<StudentAssistantChatSheet> {
     );
   }
 
+  /// Dựng phần giao diện build composer cho màn hình hiện tại.
   Widget _buildComposer(StudentThemeColors colors) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -301,6 +308,7 @@ class _ChatBubble extends StatelessWidget {
 
   final AssistantChatMessage message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -342,6 +350,7 @@ class _ChatBubble extends StatelessWidget {
 class _TypingBubble extends StatelessWidget {
   const _TypingBubble();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -394,6 +403,7 @@ class _AssistantEmptyState extends StatelessWidget {
     'Cần bao nhiêu điểm cuối kỳ để đạt GPA mục tiêu?',
   ];
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

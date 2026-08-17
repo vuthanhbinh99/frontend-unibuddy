@@ -13,12 +13,14 @@ class _DocumentVisibilityDialog extends StatefulWidget {
 class _DocumentVisibilityDialogState extends State<_DocumentVisibilityDialog> {
   late StudentStorageVisibility _selectedVisibility;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _selectedVisibility = widget.currentVisibility;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -66,6 +68,7 @@ class _DocumentVisibilityDialogState extends State<_DocumentVisibilityDialog> {
     );
   }
 
+  /// Hàm hỗ trợ visibility description cho màn hình trong file này.
   String _visibilityDescription(StudentStorageVisibility visibility) {
     return switch (visibility) {
       StudentStorageVisibility.public =>
@@ -92,12 +95,14 @@ class _ReportDocumentDialogState extends State<_ReportDocumentDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _closing = false;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  /// Thực hiện tác vụ bất đồng bộ close cho màn hình hiện tại.
   Future<void> _close([String? reason]) async {
     if (_closing) {
       return;
@@ -114,6 +119,7 @@ class _ReportDocumentDialogState extends State<_ReportDocumentDialog> {
     Navigator.of(context, rootNavigator: true).pop(reason);
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
@@ -122,6 +128,7 @@ class _ReportDocumentDialogState extends State<_ReportDocumentDialog> {
     await _close(_controller.text.trim());
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -193,6 +200,7 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
   StudentStorageVisibility _visibility = StudentStorageVisibility.public;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -200,12 +208,14 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
     _courseId = widget.courses.first.id;
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -324,6 +334,7 @@ class _UploadDocumentSheetState extends State<_UploadDocumentSheet> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final title = _titleController.text.trim();
 
@@ -363,6 +374,7 @@ class _StorageTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -440,6 +452,7 @@ class _Glow extends StatelessWidget {
 
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -456,6 +469,7 @@ class _AvatarInitial extends StatelessWidget {
   final String label;
   final bool compact;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -512,6 +526,7 @@ class _AiSummaryAssistantSheetState extends State<_AiSummaryAssistantSheet> {
   String? _error;
   Map<String, dynamic>? _result;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -524,6 +539,7 @@ class _AiSummaryAssistantSheetState extends State<_AiSummaryAssistantSheet> {
     );
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
@@ -532,6 +548,7 @@ class _AiSummaryAssistantSheetState extends State<_AiSummaryAssistantSheet> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -654,6 +671,7 @@ class _AiSummaryAssistantSheetState extends State<_AiSummaryAssistantSheet> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
@@ -704,6 +722,7 @@ class _AiSummaryResultCard extends StatelessWidget {
 
   final Map<String, dynamic> result;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -794,6 +813,7 @@ class _StorageErrorState extends StatelessWidget {
   final String message;
   final Future<void> Function() onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

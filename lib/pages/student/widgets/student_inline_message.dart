@@ -11,6 +11,7 @@ class StudentInlineMessage extends StatelessWidget {
   final String message;
   final IconData icon;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

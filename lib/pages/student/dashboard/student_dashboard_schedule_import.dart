@@ -52,6 +52,7 @@ class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
   bool get _periodIsValid =>
       _selectedStartPeriod + _selectedPeriodCount - 1 <= 12;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -74,6 +75,7 @@ class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
     );
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _roomController.dispose();
@@ -82,6 +84,7 @@ class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
     super.dispose();
   }
 
+  /// Thực hiện tác vụ bất đồng bộ close cho màn hình hiện tại.
   Future<void> _close([_ManualScheduleInput? input]) async {
     FocusManager.instance.primaryFocus?.unfocus();
     await Future<void>.delayed(const Duration(milliseconds: 120));
@@ -90,6 +93,7 @@ class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
     }
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     if (!_periodIsValid || _formKey.currentState?.validate() != true) {
       return;
@@ -110,6 +114,7 @@ class _ManualScheduleDialogState extends State<_ManualScheduleDialog> {
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = widget.l10n;
@@ -624,6 +629,7 @@ class _ImportMappingSelector extends StatelessWidget {
   final StudentThemeColors colors;
   final ValueChanged<String?> onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -708,6 +714,7 @@ class _ImportPreviewStat extends StatelessWidget {
   final String value;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -755,6 +762,7 @@ class _StudentBottomBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onSelected;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

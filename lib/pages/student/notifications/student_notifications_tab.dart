@@ -24,12 +24,14 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
   final Set<String> _hiddenIds = {};
   bool _markingAll = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = _loadNotifications();
   }
 
+  /// Tải hoặc lấy dữ liệu load notifications để cập nhật UI.
   Future<StudentNotificationData> _loadNotifications() async {
     final data = await widget.studentApi.listNotifications(
       status: _statusFilter,
@@ -45,12 +47,14 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     return data;
   }
 
+  /// Tải hoặc lấy dữ liệu reload để cập nhật UI.
   Future<void> _reload() async {
     final next = _loadNotifications();
     setState(() => _future = next);
     await next;
   }
 
+  /// Cập nhật state hoặc dữ liệu tạm cho set status filter.
   void _setStatusFilter(StudentNotificationStatusFilter value) {
     if (_statusFilter == value) {
       return;
@@ -61,6 +65,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     });
   }
 
+  /// Cập nhật state hoặc dữ liệu tạm cho set category filter.
   void _setCategoryFilter(StudentNotificationCategory? value) {
     if (_categoryFilter == value) {
       return;
@@ -71,6 +76,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     });
   }
 
+  /// Xử lý thao tác mark all as read và đồng bộ kết quả với UI.
   Future<void> _markAllAsRead() async {
     final l10n = context.l10n;
     if (_markingAll || _items.isEmpty) {
@@ -110,6 +116,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     }
   }
 
+  /// Xử lý thao tác mark as read và đồng bộ kết quả với UI.
   Future<void> _markAsRead(StudentNotificationItem item) async {
     if (!item.isRead) {
       setState(() {
@@ -135,6 +142,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     }
   }
 
+  /// Xử lý sự kiện dismiss notification từ người dùng hoặc hệ thống.
   Future<void> _dismissNotification(StudentNotificationItem item) async {
     final previousItems = List<StudentNotificationItem>.from(_items);
     setState(() {
@@ -158,6 +166,7 @@ class _StudentNotificationsTabState extends State<StudentNotificationsTab> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -247,6 +256,7 @@ class _Header extends StatelessWidget {
   final bool isMarkingAll;
   final VoidCallback onMarkAll;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -314,6 +324,7 @@ class _StatusSegmentedControl extends StatelessWidget {
   final StudentNotificationStatusFilter selected;
   final ValueChanged<StudentNotificationStatusFilter> onSelected;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -354,6 +365,7 @@ class _StatusPill extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -388,6 +400,7 @@ class _CategoryFilter extends StatelessWidget {
   final StudentNotificationCategory? selected;
   final ValueChanged<StudentNotificationCategory?> onSelected;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -455,6 +468,7 @@ class _NotificationCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -587,6 +601,7 @@ class _NotificationCard extends StatelessWidget {
 class _LoadingState extends StatelessWidget {
   const _LoadingState();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -604,6 +619,7 @@ class _LoadingState extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -644,6 +660,7 @@ class _ErrorState extends StatelessWidget {
   final String message;
   final Future<void> Function() onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

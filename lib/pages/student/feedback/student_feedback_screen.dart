@@ -58,16 +58,19 @@ class _StudentFeedbackScreenState extends State<StudentFeedbackScreen> {
     ),
   ];
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _messageController.dispose();
     super.dispose();
   }
 
+  /// Hàm hỗ trợ text cho màn hình trong file này.
   String _text(String vi, String en) {
     return widget.currentLanguageCode == 'vi' ? vi : en;
   }
 
+  /// Xử lý sự kiện pick attachment từ người dùng hoặc hệ thống.
   Future<void> _pickAttachment() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
@@ -118,6 +121,7 @@ class _StudentFeedbackScreenState extends State<StudentFeedbackScreen> {
     setState(() => _attachment = file);
   }
 
+  /// Xử lý thao tác submit feedback và đồng bộ kết quả với UI.
   Future<void> _submitFeedback() async {
     final message = _messageController.text.trim();
     if (message.length < 10) {
@@ -174,11 +178,13 @@ class _StudentFeedbackScreenState extends State<StudentFeedbackScreen> {
     }
   }
 
+  /// Hàm hỗ trợ mime type for attachment cho màn hình trong file này.
   String _mimeTypeForAttachment(PlatformFile file) {
     final extension = (file.extension ?? '').toLowerCase();
     return _imageMimeByExtension[extension] ?? 'image/jpeg';
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -438,6 +444,7 @@ class _StudentFeedbackScreenState extends State<StudentFeedbackScreen> {
     );
   }
 
+  /// Dựng phần giao diện build success cho màn hình hiện tại.
   Widget _buildSuccess(StudentThemeColors colors) {
     return Center(
       child: Padding(

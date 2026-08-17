@@ -99,6 +99,7 @@ class AdminSectionHeader extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -142,6 +143,7 @@ class AdminInlineMessage extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -188,6 +190,7 @@ class AdminCard extends StatelessWidget {
   final Color borderColor;
   final Color backgroundColor;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -206,6 +209,7 @@ class AdminCard extends StatelessWidget {
 class AdminLoading extends StatelessWidget {
   const AdminLoading({super.key});
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return const Center(
@@ -227,6 +231,7 @@ class AdminErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -253,6 +258,7 @@ class AdminEmptyState extends StatelessWidget {
   final IconData icon;
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -292,6 +298,7 @@ class AdminMetricCard extends StatelessWidget {
   final String caption;
   final Color accent;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -356,6 +363,7 @@ class AdminPill extends StatelessWidget {
   final String label;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(

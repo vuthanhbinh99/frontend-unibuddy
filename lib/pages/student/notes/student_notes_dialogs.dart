@@ -14,6 +14,7 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
   String _fileType = 'application/pdf';
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -22,6 +23,7 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
     _sizeController = TextEditingController(text: '1024');
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _nameController.dispose();
@@ -30,6 +32,7 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -92,6 +95,7 @@ class _AttachmentInputDialogState extends State<_AttachmentInputDialog> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final name = _nameController.text.trim();
     final url = _urlController.text.trim();
@@ -125,6 +129,7 @@ class _AttachmentMetadataDialog extends StatelessWidget {
 
   final PlatformFile file;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return _AttachmentNoteDialogContent(file: file);
@@ -148,6 +153,7 @@ class _AttachmentNoteDialogContentState
   late final TextEditingController _contentController;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -158,6 +164,7 @@ class _AttachmentNoteDialogContentState
     );
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
@@ -166,6 +173,7 @@ class _AttachmentNoteDialogContentState
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -206,6 +214,7 @@ class _AttachmentNoteDialogContentState
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final title = _titleController.text.trim();
     final url = _urlController.text.trim();
@@ -241,6 +250,7 @@ class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -267,6 +277,7 @@ class _AvatarBubble extends StatelessWidget {
   final String label;
   final Color? color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -302,6 +313,7 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -336,6 +348,7 @@ class _ChoiceTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -367,6 +380,7 @@ class _AttachmentTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -420,6 +434,7 @@ class _Label extends StatelessWidget {
 
   final String text;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -445,6 +460,7 @@ class _EditorTextField extends StatelessWidget {
   final String hintText;
   final FontWeight fontWeight;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -493,6 +509,7 @@ class _DialogField extends StatelessWidget {
   final TextInputType? keyboardType;
   final int maxLines;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return TextField(

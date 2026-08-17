@@ -18,6 +18,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
   final List<String> _deletedAttachmentIds = [];
   final List<StudentNoteAttachmentInput> _newAttachments = [];
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -29,6 +30,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
     _existingAttachments = [...widget.note?.attachments ?? const []];
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
@@ -36,6 +38,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -182,6 +185,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
     );
   }
 
+  /// Dựng phần giao diện build attachment list cho màn hình hiện tại.
   Widget _buildAttachmentList() {
     final colors = StudentThemeScope.colorsOf(context);
     final hasAttachments =
@@ -229,6 +233,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
     );
   }
 
+  /// Xử lý thao tác add attachment và đồng bộ kết quả với UI.
   Future<void> _addAttachment() async {
     final attachment = await showDialog<StudentNoteAttachmentInput>(
       context: context,
@@ -241,6 +246,7 @@ class _StudentNoteEditorPageState extends State<_StudentNoteEditorPage> {
     setState(() => _newAttachments.add(attachment));
   }
 
+  /// Xử lý thao tác save và đồng bộ kết quả với UI.
   void _save() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {

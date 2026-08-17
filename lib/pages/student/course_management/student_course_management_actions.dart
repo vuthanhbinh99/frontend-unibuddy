@@ -1,6 +1,7 @@
 part of 'student_course_management_page.dart';
 
 extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
+  /// Hiển thị hoặc mở phần giao diện open semester modal cho người dùng.
   Future<void> _openSemesterModal({StudentSemester? semester}) async {
     if (_isSavingSemester) {
       return;
@@ -188,6 +189,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     }
   }
 
+  /// Xử lý thao tác delete semester và đồng bộ kết quả với UI.
   Future<void> _deleteSemester(
     StudentSemester semester, {
     bool force = false,
@@ -237,6 +239,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     }
   }
 
+  /// Xử lý thao tác confirm delete semester và đồng bộ kết quả với UI.
   Future<bool?> _confirmDeleteSemester(String message) {
     final colors = StudentThemeScope.colorsOf(context);
     return showDialog<bool>(
@@ -265,6 +268,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     );
   }
 
+  /// Xử lý thao tác save course và đồng bộ kết quả với UI.
   Future<void> _saveCourse(
     _ManagedCourse? course,
     _CourseDraft draft, {
@@ -337,6 +341,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     }
   }
 
+  /// Xử lý thao tác delete course và đồng bộ kết quả với UI.
   Future<void> _deleteCourse(
     _ManagedCourse course, {
     bool force = false,
@@ -374,6 +379,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ after mutation cho màn hình hiện tại.
   Future<void> _afterMutation(String message) async {
     await _reload(showLoader: false);
     await widget.onChanged?.call();
@@ -385,6 +391,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Xử lý thao tác confirm force delete và đồng bộ kết quả với UI.
   Future<bool?> _confirmForceDelete(String message) {
     final colors = StudentThemeScope.colorsOf(context);
     return showDialog<bool>(
@@ -413,6 +420,7 @@ extension _StudentCourseManagementActions on _StudentCourseManagementPageState {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show advice dialog cho người dùng.
   void _showAdviceDialog() {
     final fallbackAdvice =
         'Để duy trì GPA tốt và đạt mục tiêu, hãy tập trung rèn luyện chuyên cần và gỡ điểm các môn học trọng số thi cuối kỳ cao nhé.';

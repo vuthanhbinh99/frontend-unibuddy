@@ -24,6 +24,7 @@ class _SystemAdminNotificationsPageState
   SystemNotificationResult? _lastResult;
   bool _submitting = false;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
@@ -31,6 +32,7 @@ class _SystemAdminNotificationsPageState
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -129,6 +131,7 @@ class _SystemAdminNotificationsPageState
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _submitting) {
       return;
@@ -171,6 +174,7 @@ class _SystemAdminNotificationsPageState
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -187,6 +191,7 @@ class _DispatchResultCard extends StatelessWidget {
 
   final SystemNotificationResult result;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(
@@ -246,6 +251,7 @@ class _ResultPill extends StatelessWidget {
   final String value;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(

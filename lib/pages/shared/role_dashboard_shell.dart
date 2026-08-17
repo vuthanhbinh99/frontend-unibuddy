@@ -34,6 +34,7 @@ class RoleDashboardShell extends StatelessWidget {
   final Color accentColor;
   final List<RoleDashboardItem> items;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,6 +103,7 @@ class _RoleHeader extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final user = session.user;
@@ -161,6 +163,7 @@ class _RoleActionTile extends StatelessWidget {
   final RoleDashboardItem item;
   final Color accentColor;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -220,6 +223,7 @@ class _RolePill extends StatelessWidget {
 
   final String label;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(

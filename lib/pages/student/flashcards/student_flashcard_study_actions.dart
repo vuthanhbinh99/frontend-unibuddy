@@ -1,6 +1,7 @@
 part of 'student_flashcard_decks_page.dart';
 
 extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
+  /// Xử lý thao tác import cards và đồng bộ kết quả với UI.
   Future<void> _importCards() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -42,6 +43,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show ai overlay cho người dùng.
   void _showAiOverlay(String message) {
     if (_aiOverlayOpen) {
       return;
@@ -96,6 +98,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Hàm hỗ trợ close ai overlay cho màn hình trong file này.
   void _closeAiOverlay() {
     if (!_aiOverlayOpen) {
       return;
@@ -107,6 +110,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
+  /// Xử lý thao tác import cards with ai và đồng bộ kết quả với UI.
   Future<void> _importCardsWithAi() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -177,6 +181,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show import type sheet cho người dùng.
   Future<StudentFlashcardCardType?> _showImportTypeSheet() {
     final colors = StudentThemeScope.colorsOf(context);
     return showModalBottomSheet<StudentFlashcardCardType>(
@@ -243,6 +248,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Dựng phần giao diện build import type option cho màn hình hiện tại.
   Widget _buildImportTypeOption({
     required BuildContext sheetContext,
     required StudentThemeColors colors,
@@ -299,6 +305,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Xử lý thao tác add card manually và đồng bộ kết quả với UI.
   Future<void> _addCardManually() async {
     final type = await pickStudentFlashcardCardType(context);
     if (type == null || !mounted) {
@@ -344,12 +351,14 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Hàm hỗ trợ requeue card cho màn hình trong file này.
   void _requeueCard(StudentFlashcardCard card) {
     // Trong phiên học, thẻ chưa thuộc quay lại cuối hàng đợi để ôn ngay,
     // còn lịch ôn dài hạn vẫn do SM-2 phía backend quyết định.
     _sessionQueue.add(card);
   }
 
+  /// Xử lý thao tác record session result và đồng bộ kết quả với UI.
   Future<void> _recordSessionResult() async {
     if (_sessionResultSent) {
       return;
@@ -372,6 +381,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Hàm hỗ trợ next card cho màn hình trong file này.
   void _nextCard() {
     if (_isFlipped) {
       _flipController.reset();
@@ -399,11 +409,13 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ restart deck cho màn hình hiện tại.
   Future<void> _restartDeck() async {
     // Tải lại toàn bộ thẻ của bộ (kể cả khi 0 thẻ tới hạn) rồi học lại từ đầu.
     await _loadReview(hocLai: true);
   }
 
+  /// Hiển thị hoặc mở phần giao diện show stats dialog cho người dùng.
   void _showStatsDialog() {
     final colors = StudentThemeScope.colorsOf(context);
     showModalBottomSheet<void>(
@@ -461,6 +473,7 @@ extension _StudentFlashcardStudyActions on _StudentFlashcardStudyPageState {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),

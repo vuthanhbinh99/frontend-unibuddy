@@ -37,6 +37,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
   bool _editingDue = false;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -44,12 +45,14 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
     _comments = [...widget.comments];
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
   }
 
+  /// Xử lý sự kiện change status từ người dùng hoặc hệ thống.
   Future<void> _changeStatus(StudentKanbanStatus? status) async {
     if (status == null || status == _task.status) {
       return;
@@ -87,6 +90,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
     }
   }
 
+  /// Xử lý thao tác edit due và đồng bộ kết quả với UI.
   Future<void> _editDue() async {
     if (_editingDue) {
       return;
@@ -121,6 +125,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
     }
   }
 
+  /// Xử lý thao tác send comment và đồng bộ kết quả với UI.
   Future<void> _sendComment() async {
     final content = _commentController.text.trim();
     if (content.isEmpty || _sendingComment) {
@@ -153,6 +158,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -390,6 +396,7 @@ class _TaskDetailsWidgetState extends State<_TaskDetailsWidget> {
     );
   }
 
+  /// Dựng phần giao diện build comment cho màn hình hiện tại.
   Widget _buildComment(StudentKanbanComment comment) {
     final colors = StudentThemeScope.colorsOf(context);
     final avatarColor = Colors.indigoAccent;

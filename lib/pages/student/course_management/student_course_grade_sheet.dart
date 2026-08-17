@@ -16,6 +16,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
   bool _isSaving = false;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -26,6 +27,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
     }
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     for (final controller in _controllers.values) {
@@ -34,6 +36,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -188,6 +191,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
     );
   }
 
+  /// Sắp xếp hoặc lọc dữ liệu sorted components trước khi hiển thị.
   List<StudentGradeComponent> _sortedComponents(
     List<StudentGradeComponent> components,
   ) {
@@ -208,6 +212,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
     return sorted;
   }
 
+  /// Xử lý thao tác save và đồng bộ kết quả với UI.
   Future<void> _save() async {
     if (_formKey.currentState?.validate() != true) {
       return;
@@ -253,6 +258,7 @@ class _GradeEntryModalState extends State<_GradeEntryModal> {
     }
   }
 
+  /// Hàm hỗ trợ grade input decoration cho màn hình trong file này.
   InputDecoration _gradeInputDecoration(
     String label,
     StudentThemeColors colors,

@@ -22,6 +22,7 @@ class StudentThemeController extends ChangeNotifier {
   StudentThemeColors get colors =>
       isLight ? StudentThemeColors.light : StudentThemeColors.dark;
 
+  /// Tải hoặc lấy dữ liệu load saved mode để cập nhật UI.
   Future<void> loadSavedMode() async {
     final savedMode = _modeFromStorageValue(
       await _preferences.readStudentThemeMode(),
@@ -33,12 +34,14 @@ class StudentThemeController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Xử lý sự kiện toggle từ người dùng hoặc hệ thống.
   void toggle() {
     _mode = isLight ? StudentThemeMode.dark : StudentThemeMode.light;
     notifyListeners();
     unawaited(_preferences.saveStudentThemeMode(_mode.name));
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _isDisposed = true;
@@ -95,6 +98,7 @@ class StudentThemedRoute extends StatelessWidget {
   final StudentThemeController controller;
   final Widget child;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return StudentThemeScope(
@@ -242,26 +246,31 @@ class StudentThemeColors {
 
   Color get elevatedBorder => isLight ? borderStrong : border;
 
+  /// Xử lý sự kiện on color từ người dùng hoặc hệ thống.
   Color onColor(Color color) {
     return ThemeData.estimateBrightnessForColor(color) == Brightness.dark
         ? Colors.white
         : const Color(0xFF0F172A);
   }
 
+  /// Hàm hỗ trợ tint cho màn hình trong file này.
   Color tint(Color color, {double lightAlpha = 0.12, double darkAlpha = 0.16}) {
     return color.withValues(alpha: isLight ? lightAlpha : darkAlpha);
   }
 
+  /// Hàm hỗ trợ overlay cho màn hình trong file này.
   Color overlay(double alpha) {
     return (isLight ? const Color(0xFF0F172A) : Colors.white).withValues(
       alpha: alpha,
     );
   }
 
+  /// Hàm hỗ trợ inverse overlay cho màn hình trong file này.
   Color inverseOverlay(double alpha) {
     return (isLight ? Colors.white : Colors.black).withValues(alpha: alpha);
   }
 
+  /// Hàm hỗ trợ elevated surface cho màn hình trong file này.
   Color elevatedSurface({double alpha = 1}) {
     return surface.withValues(alpha: alpha);
   }

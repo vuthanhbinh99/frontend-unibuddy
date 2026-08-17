@@ -55,6 +55,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
   DateTime? _selectedWeekStart;
   String? _selectedSemester;
 
+  /// Thực hiện tác vụ bất đồng bộ run schedule action cho màn hình hiện tại.
   Future<void> _runScheduleAction(
     Future<void> Function() action,
     String fallbackMessage,
@@ -71,6 +72,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     }
   }
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -79,6 +81,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     _selectedSemester = _normalizeSemesterName(widget.preferredSemesterName);
   }
 
+  /// Đồng bộ state khi widget cha truyền cấu hình mới xuống.
   @override
   void didUpdateWidget(covariant StudentScheduleTab oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -92,6 +95,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -347,6 +351,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     return null;
   }
 
+  /// Hàm hỗ trợ semester options cho màn hình trong file này.
   List<String> _semesterOptions(List<StudentScheduleItem> items) {
     final raw = <String>{
       ...widget.semesterOptions.map((name) => name.trim()),
@@ -364,6 +369,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     return normalized;
   }
 
+  /// Dựng phần giao diện build week options cho màn hình hiện tại.
   List<DateTime> _buildWeekOptions(List<StudentScheduleItem> items) {
     final weekStarts = <DateTime>{_startOfWeek(DateTime.now())};
 
@@ -389,6 +395,7 @@ class _StudentScheduleTabState extends State<StudentScheduleTab> {
     return sorted;
   }
 
+  /// Hàm hỗ trợ belongs to week cho màn hình trong file này.
   bool _belongsToWeek(StudentScheduleItem item, DateTime weekStart) {
     final itemStart = _parseFlexibleDate(item.startDate);
     final itemEnd = _parseFlexibleDate(item.endDate);

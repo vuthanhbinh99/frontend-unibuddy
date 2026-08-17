@@ -21,12 +21,14 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
   AuditLogLevel? _level;
   late Future<PaginatedAuditLogs> _future;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = _load();
   }
 
+  /// Tải hoặc lấy dữ liệu load để cập nhật UI.
   Future<PaginatedAuditLogs> _load() {
     if (_showErrors) {
       return widget.api.listErrorLogs(page: _page);
@@ -35,6 +37,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     return widget.api.listAuditLogs(page: _page, level: _level);
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh({bool resetPage = false}) async {
     final oldPage = _page;
 
@@ -58,6 +61,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu refresh from button để cập nhật UI.
   Future<void> _refreshFromButton() async {
     if (_isRefreshing) {
       return;
@@ -96,6 +100,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu reload để cập nhật UI.
   void _reload({bool resetPage = false}) {
     setState(() {
       if (resetPage) {
@@ -105,6 +110,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     });
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<PaginatedAuditLogs>(
@@ -182,6 +188,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show log detail cho người dùng.
   Future<void> _showLogDetail(AuditLogEntry log) async {
     var detail = log;
 
@@ -203,6 +210,7 @@ class _SystemAdminLogsPageState extends State<SystemAdminLogsPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -224,6 +232,7 @@ class _LogToolbar extends StatelessWidget {
   final ValueChanged<bool> onModeChanged;
   final ValueChanged<AuditLogLevel?> onLevelChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return SystemAdminCard(
@@ -299,6 +308,7 @@ class _LogList extends StatelessWidget {
   final VoidCallback? onNextPage;
   final ValueChanged<AuditLogEntry> onSelectLog;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     if (result.items.isEmpty) {
@@ -397,6 +407,7 @@ class _LogTile extends StatelessWidget {
   final AuditLogEntry log;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = levelColor(log.level);
@@ -457,6 +468,7 @@ class _LogDetailDialog extends StatelessWidget {
 
   final AuditLogEntry log;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -498,6 +510,7 @@ class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Padding(

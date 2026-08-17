@@ -28,6 +28,7 @@ class HomeScreen extends StatelessWidget {
   final VoidCallback onOpenProfile;
   final VoidCallback onLogout;
 
+  /// Chuyển đổi hoặc tính toán dữ liệu calculate gpa để UI/API dùng thống nhất.
   double _calculateGpa() {
     double totalCredits = 0;
     double weightedPoints = 0;
@@ -38,6 +39,7 @@ class HomeScreen extends StatelessWidget {
     return totalCredits > 0 ? weightedPoints / totalCredits : 0;
   }
 
+  /// Hàm hỗ trợ project icon cho màn hình trong file này.
   IconData _projectIcon(String name) {
     switch (name) {
       case 'Laptop':
@@ -59,6 +61,7 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+  /// Hàm hỗ trợ project color cho màn hình trong file này.
   Color _projectColor(String name) {
     if (name == 'rose') return const Color(0xFFF43F5E);
     if (name == 'sky') return const Color(0xFF0EA5E9);
@@ -67,6 +70,7 @@ class HomeScreen extends StatelessWidget {
     return Colors.indigo;
   }
 
+  /// Hàm hỗ trợ gpa label cho màn hình trong file này.
   String _gpaLabel(BuildContext context, double gpa) {
     final l10n = context.l10n;
     if (gpa <= 0) return l10n.t('student.dashboard.home.gpaLevel.none');
@@ -75,6 +79,7 @@ class HomeScreen extends StatelessWidget {
     return l10n.t('student.dashboard.home.gpaLevel.fair');
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

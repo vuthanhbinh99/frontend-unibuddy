@@ -20,6 +20,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   bool _saving = false;
   String? _errorMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
@@ -27,6 +28,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     super.dispose();
   }
 
+  /// Xử lý sự kiện pick due date từ người dùng hoặc hệ thống.
   Future<void> _pickDueDate() async {
     final picked = await pickKanbanDueDateTime(context, _dueDate);
     if (picked == null || !mounted) {
@@ -37,6 +39,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     });
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -82,6 +85,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -230,6 +234,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     );
   }
 
+  /// Hàm hỗ trợ field decoration cho màn hình trong file này.
   InputDecoration _fieldDecoration(String label) {
     final colors = StudentThemeScope.colorsOf(context);
     return InputDecoration(
@@ -283,6 +288,7 @@ class _KanbanTextField extends StatelessWidget {
   final String hint;
   final int maxLines;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -324,6 +330,7 @@ class _MemberAvatar extends StatelessWidget {
   final StudentKanbanMember member;
   final double radius;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -342,6 +349,7 @@ class _MemberAvatar extends StatelessWidget {
     );
   }
 
+  /// Hàm hỗ trợ avatar color cho màn hình trong file này.
   Color _avatarColor(String seed) {
     final colors = [
       Colors.indigoAccent,
@@ -364,6 +372,7 @@ class _EmptyKanbanState extends StatelessWidget {
   final bool hasGroups;
   final VoidCallback onSelectGroup;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -430,6 +439,8 @@ Future<DateTime?> pickKanbanDueDateTime(
   final colors = StudentThemeScope.colorsOf(context);
   final now = DateTime.now();
   final currentLocal = current?.toLocal();
+
+  /// Dựng widget apply theme phục vụ giao diện trong file này.
   Widget applyTheme(BuildContext context, Widget? child) {
     return Theme(
       data: buildStudentMaterialTheme(colors).copyWith(
@@ -511,6 +522,8 @@ String _initials(String name) {
   if (words.isEmpty) {
     return '?';
   }
+
+  /// Hàm hỗ trợ first letter cho màn hình trong file này.
   String firstLetter(String value) {
     return String.fromCharCode(value.runes.first).toUpperCase();
   }

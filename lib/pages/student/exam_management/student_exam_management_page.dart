@@ -28,12 +28,14 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
   bool _busy = false;
   bool _importing = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _loadFuture = _load();
   }
 
+  /// Tải hoặc lấy dữ liệu load để cập nhật UI.
   Future<void> _load() async {
     final courseData = await widget.studentApi.listCourses(tatCa: true);
     StudentExamData examData;
@@ -61,25 +63,30 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     });
   }
 
+  /// Tải hoặc lấy dữ liệu reload để cập nhật UI.
   Future<void> _reload() async {
     setState(() => _loadFuture = _load());
     await _loadFuture;
   }
 
+  /// Tạo giá trị hiển thị format date time dùng trong giao diện.
   String _formatDateTime(DateTime value) {
     return DateFormat('HH:mm - dd/MM/yyyy').format(value.toLocal());
   }
 
+  /// Tạo giá trị hiển thị format date dùng trong giao diện.
   String _formatDate(DateTime value) {
     return DateFormat('dd/MM/yyyy').format(value.toLocal());
   }
 
+  /// Hàm hỗ trợ error message cho màn hình trong file này.
   String _errorMessage(Object error) {
     return error is ApiException
         ? error.message
         : 'Có lỗi xảy ra, vui lòng thử lại.';
   }
 
+  /// Hàm hỗ trợ is exam already exists error cho màn hình trong file này.
   bool _isExamAlreadyExistsError(Object error) {
     if (error is! ApiException || error.statusCode != 409) {
       return false;
@@ -88,6 +95,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     return details is Map && details['reasonCode'] == 'EXAM_ALREADY_EXISTS';
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     if (!mounted) {
       return;
@@ -97,6 +105,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Xử lý thao tác confirm overwrite exam data và đồng bộ kết quả với UI.
   Future<bool> _confirmOverwriteExamData() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -119,6 +128,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     return confirmed == true;
   }
 
+  /// Hiển thị hoặc mở phần giao diện show exam form cho người dùng.
   Future<void> _showExamForm({StudentExamItem? exam}) async {
     if (_courses.isEmpty) {
       _showSnack('Bạn cần thêm môn học trước khi tạo lịch thi.');
@@ -195,6 +205,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     }
   }
 
+  /// Xử lý thao tác delete exam và đồng bộ kết quả với UI.
   Future<void> _deleteExam(StudentExamItem exam) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -234,6 +245,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     }
   }
 
+  /// Xử lý thao tác import with ai và đồng bộ kết quả với UI.
   Future<void> _importWithAi() async {
     if (_importing) {
       return;
@@ -338,6 +350,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     }
   }
 
+  /// Xử lý sự kiện choose import semester từ người dùng hoặc hệ thống.
   Future<String?> _chooseImportSemester() async {
     if (_semesters.isEmpty) {
       return null;
@@ -350,6 +363,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show import preview cho người dùng.
   Future<bool?> _showImportPreview(
     StudentExamImportPreviewData preview,
     StudentExamImportMapping mapping,
@@ -469,6 +483,7 @@ class _StudentExamManagementPageState extends State<StudentExamManagementPage> {
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

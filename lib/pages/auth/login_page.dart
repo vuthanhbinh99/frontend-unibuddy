@@ -41,6 +41,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _emailController.dispose();
@@ -48,6 +49,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -147,6 +149,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _loading || _googleLoading) {
       return;
@@ -177,6 +180,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ sign in with google cho màn hình hiện tại.
   Future<void> _signInWithGoogle() async {
     if (_loading || _googleLoading) {
       return;
@@ -213,6 +217,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  /// Xử lý sự kiện handle login result từ người dùng hoặc hệ thống.
   Future<void> _handleLoginResult(AuthLoginResult result) async {
     switch (result) {
       case AuthenticatedLoginResult(:final session):
@@ -273,6 +278,7 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
+  /// Thực hiện tác vụ bất đồng bộ prompt new password cho màn hình hiện tại.
   Future<String?> _promptNewPassword() async {
     final formKey = GlobalKey<FormState>();
     final passwordController = TextEditingController();
@@ -370,6 +376,7 @@ class _LoginPageState extends State<LoginPage> {
 class _GoogleMark extends StatelessWidget {
   const _GoogleMark();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(

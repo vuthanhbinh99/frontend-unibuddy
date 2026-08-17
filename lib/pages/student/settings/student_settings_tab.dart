@@ -54,6 +54,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
   bool _dailyFlashcard = true;
   String _flashcardTime = '20:00';
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -63,6 +64,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     _loadFlashcardReminderPreference();
   }
 
+  /// Tải hoặc lấy dữ liệu refresh settings để cập nhật UI.
   Future<void> _refreshSettings() async {
     await Future.wait([
       _loadSessions(),
@@ -72,6 +74,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     ]);
   }
 
+  /// Tải hoặc lấy dữ liệu load app notification preference để cập nhật UI.
   Future<void> _loadAppNotificationPreference() async {
     try {
       final enabled = await widget.studentApi.getAppNotificationPreference();
@@ -84,6 +87,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Xử lý thao tác save app notification preference và đồng bộ kết quả với UI.
   Future<void> _saveAppNotificationPreference(bool value) async {
     final previous = _appNotifications;
     setState(() {
@@ -116,6 +120,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu load flashcard reminder preference để cập nhật UI.
   Future<void> _loadFlashcardReminderPreference() async {
     final enabled = await widget.preferences.readFlashcardReminderEnabled();
     final time = await widget.preferences.readFlashcardReminderTime();
@@ -189,6 +194,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu load deadline reminder preference để cập nhật UI.
   Future<void> _loadDeadlineReminderPreference() async {
     try {
       final hours = await widget.studentApi.getDeadlineReminderPreference();
@@ -201,6 +207,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Xử lý thao tác save deadline reminder preference và đồng bộ kết quả với UI.
   Future<void> _saveDeadlineReminderPreference(String value) async {
     final previous = _deadlineReminder;
     setState(() {
@@ -233,6 +240,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Đồng bộ state khi widget cha truyền cấu hình mới xuống.
   @override
   void didUpdateWidget(covariant StudentSettingsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -242,27 +250,32 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Hàm hỗ trợ text cho màn hình trong file này.
   String _text(String vi, String en) {
     return widget.currentLanguageCode == 'vi' ? vi : en;
   }
 
+  /// Hàm hỗ trợ matches search cho màn hình trong file này.
   bool _matchesSearch(String label) {
     if (_searchQuery.isEmpty) return true;
     return label.toLowerCase().contains(_searchQuery.toLowerCase());
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack bar cho người dùng.
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open feedback screen cho người dùng.
   void _openFeedbackScreen() {
     Navigator.of(context).push(
       studentThemedRoute(
@@ -275,6 +288,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     );
   }
 
+  /// Tải hoặc lấy dữ liệu load sessions để cập nhật UI.
   Future<void> _loadSessions() async {
     setState(() => _isLoadingSessions = true);
     final next = widget.studentApi.listCurrentUserSessions(
@@ -290,6 +304,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     });
   }
 
+  /// Thực hiện tác vụ bất đồng bộ sign out device cho màn hình hiện tại.
   Future<void> _signOutDevice(AuthDeviceSession session) async {
     final previousSessions = List<AuthDeviceSession>.from(_sessions);
     setState(() {
@@ -318,6 +333,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     }
   }
 
+  /// Tạo giá trị hiển thị format last active dùng trong giao diện.
   String _formatLastActive(DateTime lastActiveAt, bool isVietnamese) {
     final difference = DateTime.now().difference(lastActiveAt);
     if (difference.inMinutes < 1) {
@@ -342,6 +358,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
         : '$days day${days == 1 ? '' : 's'} ago';
   }
 
+  /// Cập nhật state hoặc dữ liệu tạm cho clear cache.
   void _clearCache() {
     setState(() {
       _cacheSize = 0;
@@ -351,6 +368,7 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     );
   }
 
+  /// Xử lý sự kiện pick flashcard time từ người dùng hoặc hệ thống.
   Future<void> _pickFlashcardTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -376,12 +394,14 @@ class _StudentSettingsTabState extends State<StudentSettingsTab> {
     );
   }
 
+  /// Xử lý sự kiện toggle daily flashcard từ người dùng hoặc hệ thống.
   Future<void> _toggleDailyFlashcard(bool value) async {
     setState(() => _dailyFlashcard = value);
     await widget.preferences.saveFlashcardReminderEnabled(value);
     await _applyFlashcardReminderSchedule();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

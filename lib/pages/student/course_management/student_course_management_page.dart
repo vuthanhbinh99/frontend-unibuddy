@@ -55,6 +55,7 @@ class _StudentCourseManagementPageState
   String? _projectionAdvice;
   Timer? _projectionDebounce;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -68,6 +69,7 @@ class _StudentCourseManagementPageState
     _reload(showLoader: false);
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _projectionDebounce?.cancel();
@@ -75,10 +77,12 @@ class _StudentCourseManagementPageState
     super.dispose();
   }
 
+  /// Xử lý thao tác update course state và đồng bộ kết quả với UI.
   void _updateCourseState(VoidCallback fn) {
     setState(fn);
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -399,10 +403,12 @@ class _StudentCourseManagementPageState
     return courses;
   }
 
+  /// Tải hoặc lấy dữ liệu reload để cập nhật UI.
   Future<void> _reload({bool showLoader = true}) async {
     await _reloadSemesterData(showLoader: showLoader);
   }
 
+  /// Tải hoặc lấy dữ liệu reload semester data để cập nhật UI.
   Future<bool> _reloadSemesterData({
     bool showLoader = true,
     String? semesterId,
@@ -476,6 +482,7 @@ class _StudentCourseManagementPageState
     }
   }
 
+  /// Tải hoặc lấy dữ liệu load grades để cập nhật UI.
   Future<StudentGradeTranscriptData?> _loadGrades(String? semesterId) async {
     try {
       return await widget.studentApi.getGradeTranscript(maHocKy: semesterId);
@@ -484,6 +491,7 @@ class _StudentCourseManagementPageState
     }
   }
 
+  /// Xử lý sự kiện change semester từ người dùng hoặc hệ thống.
   Future<void> _changeSemester(String semesterId) async {
     if (semesterId == _selectedSemesterId || _isLoading) {
       return;
@@ -498,6 +506,7 @@ class _StudentCourseManagementPageState
     }
   }
 
+  /// Xử lý thao tác schedule projection và đồng bộ kết quả với UI.
   void _scheduleProjection() {
     _projectionDebounce?.cancel();
     final semesterId = _selectedSemesterId;
@@ -515,6 +524,7 @@ class _StudentCourseManagementPageState
     );
   }
 
+  /// Tải hoặc lấy dữ liệu load projection để cập nhật UI.
   Future<void> _loadProjection(String semesterId) async {
     if (!mounted) {
       return;
@@ -541,6 +551,7 @@ class _StudentCourseManagementPageState
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ mo tro ly chat cho màn hình hiện tại.
   Future<void> _moTroLyChat() async {
     await StudentAssistantChatSheet.show(
       context,
@@ -548,6 +559,7 @@ class _StudentCourseManagementPageState
     );
   }
 
+  /// Hàm hỗ trợ projection text cho màn hình trong file này.
   String _projectionText(StudentGpaProjectionData projection) {
     final parts = <String>[projection.message];
     if (projection.remainingCredits > 0 &&
@@ -573,6 +585,7 @@ class _StudentCourseManagementPageState
     return parts.join('\n');
   }
 
+  /// Tạo giá trị hiển thị format projection suggestion dùng trong giao diện.
   String _formatProjectionSuggestion(
     StudentGpaProjectionSuggestion item,
     StudentGpaProjectionData projection,
@@ -613,6 +626,7 @@ class _StudentCourseManagementPageState
     return '- $code${item.courseName}$credits: $targetScore$separator$requiredPart$feasibleWarning$warning.';
   }
 
+  /// Hiển thị hoặc mở phần giao diện open course modal cho người dùng.
   Future<void> _openCourseModal(_ManagedCourse? course) async {
     final result = await showModalBottomSheet<_CourseModalResult>(
       context: context,
@@ -639,6 +653,7 @@ class _StudentCourseManagementPageState
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open grade modal cho người dùng.
   Future<void> _openGradeModal(_ManagedCourse course) async {
     if (course.components.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

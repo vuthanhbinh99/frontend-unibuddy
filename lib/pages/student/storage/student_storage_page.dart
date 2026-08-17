@@ -62,6 +62,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
   static const int _documentMaxBytes = 20 * 1024 * 1024;
   static const int _videoMaxBytes = 100 * 1024 * 1024;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -69,12 +70,14 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     _loadData();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Tải hoặc lấy dữ liệu load data để cập nhật UI.
   Future<void> _loadData({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -142,6 +145,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }).toList();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -210,6 +214,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -236,6 +241,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build team info cho màn hình hiện tại.
   Widget _buildTeamInfo() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -269,6 +275,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build storage progress cho màn hình hiện tại.
   Widget _buildStorageProgress() {
     final colors = StudentThemeScope.colorsOf(context);
     final used = _data?.totalBytes ?? 0;
@@ -322,6 +329,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build upload box cho màn hình hiện tại.
   Widget _buildUploadBox() {
     final colors = StudentThemeScope.colorsOf(context);
     return InkWell(
@@ -371,6 +379,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build search bar cho màn hình hiện tại.
   Widget _buildSearchBar() {
     final colors = StudentThemeScope.colorsOf(context);
     return TextField(
@@ -396,6 +405,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build categories cho màn hình hiện tại.
   Widget _buildCategories() {
     final colors = StudentThemeScope.colorsOf(context);
     return SizedBox(
@@ -429,6 +439,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build body cho màn hình hiện tại.
   Widget _buildBody(List<StudentStorageFile> filteredFiles) {
     final colors = StudentThemeScope.colorsOf(context);
     if (_loading) {
@@ -483,6 +494,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build round icon button cho màn hình hiện tại.
   Widget _buildRoundIconButton(IconData icon, VoidCallback onTap) {
     final colors = StudentThemeScope.colorsOf(context);
     return InkWell(
@@ -501,6 +513,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build member avatars cho màn hình hiện tại.
   Widget _buildMemberAvatars() {
     final authors = (_data?.items ?? const [])
         .map((file) => file.authorLabel)
@@ -536,6 +549,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Dựng phần giao diện build bento card cho màn hình hiện tại.
   Widget _buildBentoCard(StudentStorageFile file, {required bool isFullWidth}) {
     final colors = StudentThemeScope.colorsOf(context);
     final style = _fileStyle(context, file);
@@ -600,6 +614,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Thực hiện tác vụ bất đồng bộ start upload flow cho màn hình hiện tại.
   Future<void> _startUploadFlow() async {
     if (_courses.isEmpty) {
       _showSnack('Hãy thêm học phần trước khi lưu tài liệu.');
@@ -696,6 +711,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     return File(path).readAsBytes();
   }
 
+  /// Hiển thị hoặc mở phần giao diện show file details cho người dùng.
   void _showFileDetails(StudentStorageFile file) {
     final colors = StudentThemeScope.colorsOf(context);
     final style = _fileStyle(context, file);
@@ -890,6 +906,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Xử lý sự kiện change visibility từ người dùng hoặc hệ thống.
   Future<void> _changeVisibility(StudentStorageFile file) async {
     final selected = await showDialog<StudentStorageVisibility>(
       context: context,
@@ -919,6 +936,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }
   }
 
+  /// Xử lý thao tác confirm delete và đồng bộ kết quả với UI.
   Future<void> _confirmDelete(StudentStorageFile file) async {
     final colors = StudentThemeScope.colorsOf(context);
     final confirmed = await showDialog<bool>(
@@ -963,6 +981,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }
   }
 
+  /// Thực hiện tác vụ bất đồng bộ report document cho màn hình hiện tại.
   Future<void> _reportDocument(StudentStorageFile file) async {
     final reason = await showDialog<String>(
       context: context,
@@ -990,6 +1009,7 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }
   }
 
+  /// Xử lý sự kiện copy link từ người dùng hoặc hệ thống.
   Future<void> _copyLink(StudentStorageFile file) async {
     await Clipboard.setData(ClipboardData(text: file.downloadUrl));
     if (mounted) {
@@ -997,12 +1017,14 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     }
   }
 
+  /// Dựng phần giao diện build local summary cho màn hình hiện tại.
   String _buildLocalSummary(StudentStorageFile file) {
     return 'Tệp ${file.name} thuộc ${file.courseLabel}, dung lượng '
         '${formatStudentStorageBytes(file.sizeBytes)}. Tài liệu đang ở chế độ '
         '${file.visibility.label.toLowerCase()} và được cập nhật ${file.updatedLabel}.';
   }
 
+  /// Hiển thị hoặc mở phần giao diện open ai summary assistant cho người dùng.
   void _openAiSummaryAssistant({
     String? initialTitle,
     String? initialContent,
@@ -1027,10 +1049,12 @@ class _StudentStoragePageState extends State<StudentStoragePage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện show ai co pilot cho người dùng.
   void _showAiCoPilot() {
     _openAiSummaryAssistant();
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),

@@ -27,17 +27,20 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
 
   bool get _canViewAllTasks => _board?.myRole == 'TRUONG_NHOM';
 
+  /// Kiểm tra điều kiện can see task trước khi cho phép thao tác tiếp theo.
   bool _canSeeTask(StudentKanbanTask task) {
     return (_canViewAllTasks && _showAllTasksForLeader) ||
         task.assigneeId == widget.currentUserId;
   }
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _loadBoard();
   }
 
+  /// Tải hoặc lấy dữ liệu load board để cập nhật UI.
   Future<void> _loadBoard() async {
     setState(() {
       _loadingBoard = true;
@@ -72,6 +75,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open external chat cho người dùng.
   Future<void> _openExternalChat(StudentStudyGroup group) async {
     final raw = group.chatLink.trim();
     if (raw.isEmpty) {
@@ -111,6 +115,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     return Uri.parse('https://$raw');
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final group = widget.group;
@@ -244,6 +249,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     );
   }
 
+  /// Dựng phần giao diện build group insight body cho màn hình hiện tại.
   Widget _buildGroupInsightBody(StudentThemeColors colors) {
     if (_loadingBoard && _board == null) {
       return const Center(child: CircularProgressIndicator());
@@ -475,6 +481,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     );
   }
 
+  /// Dựng phần giao diện build task scope selector cho màn hình hiện tại.
   Widget _buildTaskScopeSelector(StudentThemeColors colors) {
     final allTasks = _board?.tasks ?? const <StudentKanbanTask>[];
     final myTaskCount = allTasks
@@ -509,6 +516,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     );
   }
 
+  /// Dựng phần giao diện build task scope option cho màn hình hiện tại.
   Widget _buildTaskScopeOption({
     required StudentThemeColors colors,
     required String label,
@@ -543,6 +551,7 @@ class _StudyGroupRoomPageState extends State<_StudyGroupRoomPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format date dùng trong giao diện.
   String _formatDate(DateTime value) {
     final day = value.day.toString().padLeft(2, '0');
     final month = value.month.toString().padLeft(2, '0');

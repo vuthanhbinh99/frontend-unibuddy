@@ -57,6 +57,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   late Future<_CatalogBundle> _catalogBundleFuture;
   late Future<auth.PublicUser> _profileFuture;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -70,16 +71,19 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     _reloadAll();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _studentThemeController.dispose();
     super.dispose();
   }
 
+  /// Xử lý thao tác update dashboard state và đồng bộ kết quả với UI.
   void _updateDashboardState(VoidCallback fn) {
     setState(fn);
   }
 
+  /// Đồng bộ state khi widget cha truyền cấu hình mới xuống.
   @override
   void didUpdateWidget(covariant StudentDashboardPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -89,6 +93,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
+  /// Tải hoặc lấy dữ liệu reload all để cập nhật UI.
   void _reloadAll() {
     _homeDataFuture = widget.studentApi.getStudentHomeData();
     _scheduleBundleFuture = _loadScheduleBundle();
@@ -96,6 +101,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     _profileFuture = widget.studentApi.getCurrentUser();
   }
 
+  /// Thực hiện tác vụ bất đồng bộ restore frontend preferences cho màn hình hiện tại.
   Future<void> _restoreFrontendPreferences() async {
     await _studentThemeController.loadSavedMode();
     final savedTabIndex = await _frontendPreferences
@@ -126,6 +132,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
+  /// Xử lý sự kiện change language từ người dùng hoặc hệ thống.
   void _changeLanguage(String code) {
     if (code == _languageCode) {
       return;
@@ -136,6 +143,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     widget.onLanguageChanged(code);
   }
 
+  /// Xử lý sự kiện select tab từ người dùng hoặc hệ thống.
   void _selectTab(int index) {
     if (index < 0 || index > 4 || index == _currentIndex) {
       return;
@@ -144,12 +152,14 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     unawaited(_frontendPreferences.saveStudentDashboardTabIndex(index));
   }
 
+  /// Tải hoặc lấy dữ liệu load schedule bundle để cập nhật UI.
   Future<_ScheduleBundle> _loadScheduleBundle() async {
     final schedules = await widget.studentApi.listSchedules();
     final deadlines = await widget.studentApi.listDeadlines();
     return _ScheduleBundle(schedules: schedules, deadlines: deadlines);
   }
 
+  /// Tải hoặc lấy dữ liệu load catalog bundle để cập nhật UI.
   Future<_CatalogBundle> _loadCatalogBundle() async {
     final courses = await widget.studentApi.listCourses();
     final grades = await _fallback(
@@ -161,38 +171,45 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     return _CatalogBundle(courses: courses, grades: grades);
   }
 
+  /// Tải hoặc lấy dữ liệu refresh home để cập nhật UI.
   Future<void> _refreshHome() async {
     final next = widget.studentApi.getStudentHomeData();
     setState(() => _homeDataFuture = next);
     await next;
   }
 
+  /// Tải hoặc lấy dữ liệu refresh schedule để cập nhật UI.
   Future<void> _refreshSchedule() async {
     final next = _loadScheduleBundle();
     setState(() => _scheduleBundleFuture = next);
     await next;
   }
 
+  /// Tải hoặc lấy dữ liệu refresh catalog để cập nhật UI.
   Future<void> _refreshCatalog() async {
     final next = _loadCatalogBundle();
     setState(() => _catalogBundleFuture = next);
     await next;
   }
 
+  /// Tải hoặc lấy dữ liệu refresh profile để cập nhật UI.
   Future<void> _refreshProfile() async {
     final next = widget.studentApi.getCurrentUser();
     setState(() => _profileFuture = next);
     await next;
   }
 
+  /// Tải hoặc lấy dữ liệu refresh academic data để cập nhật UI.
   Future<void> _refreshAcademicData() async {
     await _refreshStudentDashboardData(labelPrefix: 'academic');
   }
 
+  /// Tải hoặc lấy dữ liệu refresh after schedule import để cập nhật UI.
   Future<void> _refreshAfterScheduleImport() async {
     await _refreshStudentDashboardData(labelPrefix: 'schedule import');
   }
 
+  /// Tải hoặc lấy dữ liệu refresh student dashboard data để cập nhật UI.
   Future<void> _refreshStudentDashboardData({
     required String labelPrefix,
   }) async {
@@ -233,6 +250,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
+  /// Xử lý sự kiện toggle deadline từ người dùng hoặc hệ thống.
   Future<void> _toggleDeadline(StudentDeadlineItem item) async {
     final nextStatus = item.completed
         ? StudentDeadlineStatus.todo
@@ -245,6 +263,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     await _refreshHome();
   }
 
+  /// Hiển thị hoặc mở phần giao diện open exam management cho người dùng.
   void _openExamManagement() {
     Navigator.of(context).push(
       buildStudentThemedRoute<void>(
@@ -255,10 +274,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open notifications cho người dùng.
   void _openNotifications() {
     _selectTab(3);
   }
 
+  /// Hiển thị hoặc mở phần giao diện open profile cho người dùng.
   Future<void> _openProfile() async {
     final user = await _profileFuture;
     if (!mounted) {
@@ -280,6 +301,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 
+  /// Dựng phần giao diện build screens cho màn hình hiện tại.
   List<Widget> _buildScreens() {
     return [
       FutureBuilder<StudentHomeData>(
@@ -377,6 +399,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     ];
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -436,6 +459,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 
+  /// Hàm hỗ trợ semester names cho màn hình trong file này.
   List<String> _semesterNames(StudentCourseData courses) {
     final names = <String>{
       for (final semester in courses.semesters)

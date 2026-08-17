@@ -41,18 +41,21 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
   String _searchQuery = '';
   String? _message;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _loadNotes();
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -156,6 +159,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -184,6 +188,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build workspace header cho màn hình hiện tại.
   Widget _buildWorkspaceHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -216,6 +221,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build avatar stack cho màn hình hiện tại.
   Widget _buildAvatarStack() {
     return SizedBox(
       width: 80,
@@ -231,6 +237,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build storage indicator cho màn hình hiện tại.
   Widget _buildStorageIndicator(int usedBytes) {
     final colors = StudentThemeScope.colorsOf(context);
     final progress = (usedBytes / _maxStorageBytes).clamp(0.0, 1.0);
@@ -280,6 +287,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build create card cho màn hình hiện tại.
   Widget _buildCreateCard() {
     final colors = StudentThemeScope.colorsOf(context);
     return GestureDetector(
@@ -336,6 +344,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build search box cho màn hình hiện tại.
   Widget _buildSearchBox() {
     final colors = StudentThemeScope.colorsOf(context);
     return Container(
@@ -360,6 +369,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build quick filters cho màn hình hiện tại.
   Widget _buildQuickFilters() {
     final colors = StudentThemeScope.colorsOf(context);
     return SingleChildScrollView(
@@ -399,6 +409,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build asymmetric note card cho màn hình hiện tại.
   Widget _buildAsymmetricNoteCard(StudentNote note, int index) {
     final colors = StudentThemeScope.colorsOf(context);
     final type = _noteType(note);
@@ -504,6 +515,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Dựng phần giao diện build empty state cho màn hình hiện tại.
   Widget _buildEmptyState() {
     final colors = StudentThemeScope.colorsOf(context);
     return Padding(
@@ -562,6 +574,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     return _notes.fold<int>(0, (total, note) => total + _noteSize(note));
   }
 
+  /// Hàm hỗ trợ note size cho màn hình trong file này.
   int _noteSize(StudentNote note) {
     final attachmentSize = note.attachments.fold<int>(
       0,
@@ -598,6 +611,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     return const _NoteType(icon: Icons.edit_note, color: Color(0xFF8B5CF6));
   }
 
+  /// Tải hoặc lấy dữ liệu load notes để cập nhật UI.
   Future<void> _loadNotes() async {
     setState(() => _isLoading = true);
     try {
@@ -631,6 +645,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open editor cho người dùng.
   Future<void> _openEditor(StudentNote? note) async {
     StudentNote? detail = note;
     if (note != null) {
@@ -665,6 +680,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     await _saveNote(detail, draft);
   }
 
+  /// Xử lý thao tác save note và đồng bộ kết quả với UI.
   Future<void> _saveNote(StudentNote? note, _StudentNoteDraft draft) async {
     setState(() => _isSaving = true);
     try {
@@ -707,6 +723,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     }
   }
 
+  /// Xử lý thao tác delete note và đồng bộ kết quả với UI.
   Future<void> _deleteNote(StudentNote note) async {
     final colors = StudentThemeScope.colorsOf(context);
     final confirmed = await showDialog<bool>(
@@ -756,6 +773,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show create choice sheet cho người dùng.
   Future<void> _showCreateChoiceSheet() async {
     final colors = StudentThemeScope.colorsOf(context);
     final choice = await showModalBottomSheet<_CreateChoice>(
@@ -798,6 +816,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     }
   }
 
+  /// Xử lý thao tác create attachment note và đồng bộ kết quả với UI.
   Future<void> _createAttachmentNote() async {
     final picked = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -831,6 +850,7 @@ class _StudentNotesPageState extends State<StudentNotesPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format bytes dùng trong giao diện.
   String _formatBytes(int bytes) {
     if (bytes >= 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';

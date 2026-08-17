@@ -31,12 +31,14 @@ class _StudentFlashcardManagePageState
   bool _busy = false;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _loadCards();
   }
 
+  /// Tải hoặc lấy dữ liệu load cards để cập nhật UI.
   Future<void> _loadCards({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -73,6 +75,7 @@ class _StudentFlashcardManagePageState
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     if (!mounted) {
       return;
@@ -82,6 +85,7 @@ class _StudentFlashcardManagePageState
     );
   }
 
+  /// Xử lý thao tác add card và đồng bộ kết quả với UI.
   Future<void> _addCard() async {
     final type = await pickStudentFlashcardCardType(context);
     if (type == null || !mounted) {
@@ -113,6 +117,7 @@ class _StudentFlashcardManagePageState
     }
   }
 
+  /// Xử lý thao tác edit card và đồng bộ kết quả với UI.
   Future<void> _editCard(StudentFlashcardCard card) async {
     if (card.isQuiz) {
       final draft = await showStudentFlashcardQuizEditor(context, card: card);
@@ -140,6 +145,7 @@ class _StudentFlashcardManagePageState
     }
   }
 
+  /// Xử lý thao tác delete card và đồng bộ kết quả với UI.
   Future<void> _deleteCard(StudentFlashcardCard card) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -174,6 +180,7 @@ class _StudentFlashcardManagePageState
     }, 'Đã xóa thẻ.');
   }
 
+  /// Thực hiện tác vụ bất đồng bộ run mutation cho màn hình hiện tại.
   Future<void> _runMutation(
     Future<void> Function() action,
     String successMessage,
@@ -197,6 +204,7 @@ class _StudentFlashcardManagePageState
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -222,6 +230,7 @@ class _StudentFlashcardManagePageState
     );
   }
 
+  /// Dựng phần giao diện build body cho màn hình hiện tại.
   Widget _buildBody(StudentThemeColors colors) {
     if (_loading) {
       return Center(
@@ -289,6 +298,7 @@ class _StudentFlashcardManagePageState
     );
   }
 
+  /// Dựng phần giao diện build card tile cho màn hình hiện tại.
   Widget _buildCardTile(
     StudentThemeColors colors,
     StudentFlashcardCard card,

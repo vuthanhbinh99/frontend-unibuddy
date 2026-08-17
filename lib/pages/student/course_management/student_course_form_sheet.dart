@@ -21,6 +21,7 @@ class _CourseModalState extends State<_CourseModal> {
   String? _weightError;
   bool _saving = false;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -32,6 +33,7 @@ class _CourseModalState extends State<_CourseModal> {
     _finalWeight = widget.course?.finalWeight ?? 60;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -292,6 +294,7 @@ class _CourseModalState extends State<_CourseModal> {
     );
   }
 
+  /// Hàm hỗ trợ modal input decoration cho màn hình trong file này.
   InputDecoration _modalInputDecoration(String label) {
     final colors = StudentThemeScope.colorsOf(context);
     return InputDecoration(
@@ -315,6 +318,7 @@ class _CourseModalState extends State<_CourseModal> {
     );
   }
 
+  /// Dựng phần giao diện build slider row cho màn hình hiện tại.
   Widget _buildSliderRow(
     String label,
     double value,
@@ -359,6 +363,7 @@ class _CourseModalState extends State<_CourseModal> {
     );
   }
 
+  /// Xử lý thao tác save và đồng bộ kết quả với UI.
   Future<void> _save() async {
     if (_formKey.currentState?.validate() != true) {
       return;

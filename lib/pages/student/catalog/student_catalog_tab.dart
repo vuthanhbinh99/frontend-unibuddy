@@ -41,6 +41,7 @@ class StudentCatalogTab extends StatelessWidget {
   final VoidCallback onKanbanChanged;
   final Future<void> Function() onRefresh;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -362,6 +363,7 @@ class CoursesSubScreen extends StatelessWidget {
 
   final List<StudentCourseItem> courses;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -450,6 +452,7 @@ class GradesSubScreen extends StatelessWidget {
 
   final StudentGradeTranscriptData grades;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

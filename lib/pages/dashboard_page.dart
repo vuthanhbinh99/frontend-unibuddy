@@ -23,12 +23,14 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   late Future<PublicUser> _userFuture;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _userFuture = widget.studentApi.getCurrentUser();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,6 +76,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -87,6 +90,7 @@ class _ProfileCard extends StatelessWidget {
 
   final PublicUser user;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -154,6 +158,7 @@ class _ProfileCard extends StatelessWidget {
 class _MetricGrid extends StatelessWidget {
   const _MetricGrid();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return GridView.count(
@@ -196,6 +201,7 @@ class _MetricTile extends StatelessWidget {
   final String label;
   final String value;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -232,6 +238,7 @@ class _MetricTile extends StatelessWidget {
 class _NextActions extends StatelessWidget {
   const _NextActions();
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -262,6 +269,7 @@ class _InlineWarning extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -287,6 +295,7 @@ class _Pill extends StatelessWidget {
 
   final String label;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(

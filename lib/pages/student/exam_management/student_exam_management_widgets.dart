@@ -6,6 +6,7 @@ class _ExamSummaryBanner extends StatelessWidget {
   final int total;
   final int upcoming;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -69,6 +70,7 @@ class _ExamCard extends StatelessWidget {
   final String Function(DateTime value) formatDate;
   final String Function(DateTime value) formatDateTime;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -146,6 +148,7 @@ class _Tag extends StatelessWidget {
 
   final String text;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -173,6 +176,7 @@ class _InfoPill extends StatelessWidget {
   final IconData icon;
   final String label;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -204,6 +208,7 @@ class _ImportStatChip extends StatelessWidget {
   final String value;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Chip(
@@ -226,6 +231,7 @@ class _EmptyExamState extends StatelessWidget {
   final Future<void> Function() onAction;
   final String actionLabel;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -266,6 +272,7 @@ class _SemesterPickerSheet extends StatelessWidget {
 
   final List<StudentSemester> semesters;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -345,6 +352,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
   late TextEditingController _roomController;
   late TextEditingController _examLocationController;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -361,6 +369,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
     );
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _roomController.dispose();
@@ -368,6 +377,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
     super.dispose();
   }
 
+  /// Xử lý sự kiện pick date từ người dùng hoặc hệ thống.
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -389,6 +399,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
     });
   }
 
+  /// Xử lý sự kiện pick time từ người dùng hoặc hệ thống.
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -408,6 +419,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
     });
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -426,6 +438,7 @@ class _ExamFormSheetState extends State<_ExamFormSheet> {
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

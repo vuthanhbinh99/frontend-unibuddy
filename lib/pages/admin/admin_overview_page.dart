@@ -26,18 +26,21 @@ class AdminOverviewPage extends StatefulWidget {
 class _AdminOverviewPageState extends State<AdminOverviewPage> {
   late Future<AdminDashboardData> _future;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = widget.api.loadDashboard();
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final next = widget.api.loadDashboard();
     setState(() => _future = next);
     await next;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<AdminDashboardData>(
@@ -76,6 +79,7 @@ class _AdminOverviewPageState extends State<AdminOverviewPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -95,6 +99,7 @@ class _OverviewContent extends StatelessWidget {
   final VoidCallback onOpenSchools;
   final VoidCallback onOpenModeration;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final totalReports = data.pendingReports.length + data.processedReportCount;
@@ -216,6 +221,7 @@ class _QuickActions extends StatelessWidget {
   final VoidCallback onOpenSchools;
   final VoidCallback onOpenModeration;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final actions = [
@@ -252,6 +258,7 @@ class _PendingNotice extends StatelessWidget {
 
   final int count;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -282,6 +289,7 @@ class _RecentReportTile extends StatelessWidget {
 
   final AdminDocumentReport report;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final color = adminReportStatusColor(report.status);
@@ -345,6 +353,7 @@ class _SchoolPreview extends StatelessWidget {
 
   final AdminSchool school;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(

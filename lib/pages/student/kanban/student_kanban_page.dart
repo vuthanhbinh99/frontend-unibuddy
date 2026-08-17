@@ -46,11 +46,13 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
 
   bool get _canViewAllTasks => _board?.myRole == 'TRUONG_NHOM';
 
+  /// Kiểm tra điều kiện can see task trước khi cho phép thao tác tiếp theo.
   bool _canSeeTask(StudentKanbanTask task) {
     return (_canViewAllTasks && _showAllTasksForLeader) ||
         task.assigneeId == widget.currentUserId;
   }
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -60,6 +62,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     });
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _tabController.dispose();
@@ -117,6 +120,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     }
   }
 
+  /// Tải hoặc lấy dữ liệu load board để cập nhật UI.
   Future<void> _loadBoard([String? groupId]) async {
     final targetGroupId = (groupId ?? _activeGroupId ?? '').trim();
     if (targetGroupId.isEmpty) {
@@ -251,6 +255,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open create task sheet cho người dùng.
   void _openCreateTaskSheet() {
     final colors = StudentThemeScope.colorsOf(context);
     final groupId = _activeGroupId?.trim();
@@ -292,6 +297,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open task details cho người dùng.
   void _openTaskDetails(StudentKanbanTask task) {
     final colors = StudentThemeScope.colorsOf(context);
     showModalBottomSheet<void>(
@@ -325,6 +331,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Xử lý sự kiện change task status từ người dùng hoặc hệ thống.
   Future<StudentKanbanTask> _changeTaskStatus(
     StudentKanbanTask task,
     StudentKanbanStatus status,
@@ -342,6 +349,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     return updated;
   }
 
+  /// Xử lý sự kiện change task due từ người dùng hoặc hệ thống.
   Future<StudentKanbanTask> _changeTaskDue(
     StudentKanbanTask task,
     DateTime? dueDate,
@@ -360,6 +368,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     return updated;
   }
 
+  /// Thực hiện tác vụ bất đồng bộ comment task cho màn hình hiện tại.
   Future<StudentKanbanComment> _commentTask(
     StudentKanbanTask task,
     String content,
@@ -379,6 +388,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     return comment;
   }
 
+  /// Hàm hỗ trợ replace task cho màn hình trong file này.
   void _replaceTask(StudentKanbanTask updated) {
     setState(() {
       _tasks = _sortTasks(
@@ -395,6 +405,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     });
   }
 
+  /// Xử lý sự kiện copy chat link từ người dùng hoặc hệ thống.
   Future<void> _copyChatLink() async {
     final groupId = _activeGroupId;
     if (groupId == null || groupId.isEmpty) {
@@ -416,12 +427,14 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -508,6 +521,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     final group = _board?.group;
@@ -550,6 +564,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build avatar preview cho màn hình hiện tại.
   Widget _buildAvatarPreview(List<StudentKanbanMember> members) {
     final colors = StudentThemeScope.colorsOf(context);
     if (members.isEmpty) {
@@ -595,6 +610,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build error banner cho màn hình hiện tại.
   Widget _buildErrorBanner() {
     final colors = StudentThemeScope.colorsOf(context);
     return Padding(
@@ -636,6 +652,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build tabs cho màn hình hiện tại.
   Widget _buildTabs() {
     final colors = StudentThemeScope.colorsOf(context);
     return Container(
@@ -670,6 +687,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build task scope selector cho màn hình hiện tại.
   Widget _buildTaskScopeSelector() {
     final colors = StudentThemeScope.colorsOf(context);
     final myTaskCount = _tasks
@@ -704,6 +722,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build task scope option cho màn hình hiện tại.
   Widget _buildTaskScopeOption({
     required String label,
     required int count,
@@ -738,6 +757,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build task list cho màn hình hiện tại.
   Widget _buildTaskList(StudentKanbanStatus status) {
     final colors = StudentThemeScope.colorsOf(context);
     if (_activeGroupId == null || _activeGroupId!.isEmpty) {
@@ -892,6 +912,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build task assignee cho màn hình hiện tại.
   Widget _buildTaskAssignee(StudentKanbanTask task) {
     final colors = StudentThemeScope.colorsOf(context);
     final member = _memberById(task.assigneeId);
@@ -916,6 +937,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     );
   }
 
+  /// Dựng phần giao diện build priority badge cho màn hình hiện tại.
   Widget _buildPriorityBadge(StudentKanbanTask task) {
     final colors = StudentThemeScope.colorsOf(context);
     if (task.status == StudentKanbanStatus.overdue) {
@@ -1001,6 +1023,7 @@ class _StudentKanbanPageState extends State<StudentKanbanPage>
     return null;
   }
 
+  /// Sắp xếp hoặc lọc dữ liệu sort tasks trước khi hiển thị.
   List<StudentKanbanTask> _sortTasks(List<StudentKanbanTask> tasks) {
     final sorted = [...tasks];
     sorted.sort((a, b) {

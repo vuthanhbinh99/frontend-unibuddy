@@ -6,6 +6,7 @@ class _SettingsCard extends StatelessWidget {
   final StudentThemeColors colors;
   final Widget child;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -26,6 +27,7 @@ class _SectionHeader extends StatelessWidget {
   final StudentThemeColors colors;
   final String title;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -56,6 +58,7 @@ class _LanguageButton extends StatelessWidget {
   final StudentThemeColors colors;
   final VoidCallback onTap;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -97,6 +100,7 @@ class _SwitchRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -141,6 +145,7 @@ class _DropdownRow extends StatelessWidget {
   final List<DropdownMenuItem<String>> items;
   final ValueChanged<String?>? onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return Row(

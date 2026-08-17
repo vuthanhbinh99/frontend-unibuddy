@@ -19,6 +19,7 @@ class _SemesterOverviewCard extends StatelessWidget {
   final ValueChanged<StudentSemester> onEditSemester;
   final ValueChanged<StudentSemester> onDeleteSemester;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -193,6 +194,7 @@ class _InlineModalError extends StatelessWidget {
 
   final String message;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -256,6 +258,8 @@ String _semesterNumberFromName(String? name) {
 
 StudentGradeComponent? _findComponent(
   List<StudentGradeComponent> components,
+
+  /// Hàm hỗ trợ function cho màn hình trong file này.
   bool Function(String normalizedName) test,
 ) {
   for (final component in components) {

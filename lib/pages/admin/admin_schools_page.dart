@@ -20,18 +20,21 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
   String _query = '';
   String? _busyCode;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _future = widget.api.listSchools();
   }
 
+  /// Tải hoặc lấy dữ liệu refresh để cập nhật UI.
   Future<void> _refresh() async {
     final next = widget.api.listSchools();
     setState(() => _future = next);
     await next;
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<AdminSchool>>(
@@ -88,6 +91,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     );
   }
 
+  /// Sắp xếp hoặc lọc dữ liệu filter schools trước khi hiển thị.
   List<AdminSchool> _filterSchools(List<AdminSchool> schools) {
     final normalizedQuery = _query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) {
@@ -100,6 +104,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     }).toList();
   }
 
+  /// Hiển thị hoặc mở phần giao diện open school dialog cho người dùng.
   Future<void> _openSchoolDialog({AdminSchool? school}) async {
     final saved = await showDialog<bool>(
       context: context,
@@ -133,6 +138,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open academic rules cho người dùng.
   void _openAcademicRules(AdminSchool school) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -145,6 +151,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     );
   }
 
+  /// Xử lý thao tác confirm delete và đồng bộ kết quả với UI.
   Future<void> _confirmDelete(AdminSchool school) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -193,6 +200,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show message cho người dùng.
   void _showMessage(String message) {
     if (!mounted) {
       return;
@@ -202,6 +210,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Hiển thị hoặc mở phần giao diện show error cho người dùng.
   void _showError(String message) {
     if (!mounted) {
       return;
@@ -211,6 +220,7 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     );
   }
 
+  /// Tạo giá trị hiển thị format error dùng trong giao diện.
   String _formatError(Object error) {
     if (error is ApiException) {
       return error.message;
@@ -224,6 +234,7 @@ class _SchoolsHeader extends StatelessWidget {
 
   final VoidCallback onCreateSchool;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final button = FilledButton.icon(
@@ -267,6 +278,7 @@ class _SearchBox extends StatelessWidget {
   final int filteredCount;
   final ValueChanged<String> onChanged;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -311,6 +323,7 @@ class _SchoolCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onConfigureRules;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     return AdminCard(
@@ -427,6 +440,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
   bool _saving = false;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -434,6 +448,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
     _nameController = TextEditingController(text: widget.school?.name ?? '');
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _codeController.dispose();
@@ -441,6 +456,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.school != null;
@@ -499,6 +515,7 @@ class _SchoolDialogState extends State<_SchoolDialog> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;

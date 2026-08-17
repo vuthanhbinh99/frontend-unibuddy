@@ -114,6 +114,7 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
   late final TextEditingController _backController;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -121,6 +122,7 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
     _backController = TextEditingController(text: widget.card?.back ?? '');
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _frontController.dispose();
@@ -128,6 +130,7 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
     super.dispose();
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final front = _frontController.text.trim();
     final back = _backController.text.trim();
@@ -143,6 +146,7 @@ class _EssayEditorSheetState extends State<_EssayEditorSheet> {
     );
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -240,6 +244,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
   String? _correctAnswer;
   String? _errorMessage;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -267,6 +272,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
     }
   }
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _questionController.dispose();
@@ -277,6 +283,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
     super.dispose();
   }
 
+  /// Xử lý thao tác add option và đồng bộ kết quả với UI.
   void _addOption() {
     if (_options.length >= _maxOptions) {
       return;
@@ -288,6 +295,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
     });
   }
 
+  /// Xử lý thao tác remove option và đồng bộ kết quả với UI.
   void _removeOption(int index) {
     if (_options.length <= _minOptions) {
       return;
@@ -316,6 +324,7 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
     });
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final question = _questionController.text.trim();
     if (question.isEmpty) {
@@ -350,12 +359,14 @@ class _QuizEditorSheetState extends State<_QuizEditorSheet> {
     );
   }
 
+  /// Hàm hỗ trợ warn cho màn hình trong file này.
   void _warn(String message) {
     setState(() {
       _errorMessage = message;
     });
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);

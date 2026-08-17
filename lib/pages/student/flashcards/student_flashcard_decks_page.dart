@@ -45,6 +45,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
   List<StudentCourseItem> _courses = [];
   StudentFlashcardStatistics? _statistics;
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
@@ -52,6 +53,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     _loadData();
   }
 
+  /// Tải hoặc lấy dữ liệu load data để cập nhật UI.
   Future<void> _loadData({bool silent = false}) async {
     if (!silent) {
       setState(() {
@@ -101,6 +103,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     }
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -151,6 +154,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     );
   }
 
+  /// Dựng phần giao diện build header cho màn hình hiện tại.
   Widget _buildHeader() {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -188,6 +192,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     );
   }
 
+  /// Dựng phần giao diện build statistics strip cho màn hình hiện tại.
   Widget _buildStatisticsStrip() {
     final colors = StudentThemeScope.colorsOf(context);
     final stats = _statistics;
@@ -227,6 +232,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     );
   }
 
+  /// Dựng phần giao diện build filters cho màn hình hiện tại.
   Widget _buildFilters() {
     final colors = StudentThemeScope.colorsOf(context);
     final filters = <_DeckFilter>[
@@ -270,6 +276,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     );
   }
 
+  /// Dựng phần giao diện build deck grid cho màn hình hiện tại.
   Widget _buildDeckGrid() {
     final colors = StudentThemeScope.colorsOf(context);
     if (_loading) {
@@ -319,6 +326,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     );
   }
 
+  /// Hiển thị hoặc mở phần giao diện open study cho người dùng.
   Future<void> _openStudy(StudentFlashcardDeck deck, Color color) async {
     await Navigator.push<void>(
       context,
@@ -337,6 +345,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện open create deck sheet cho người dùng.
   Future<void> _openCreateDeckSheet() async {
     final colors = StudentThemeScope.colorsOf(context);
     final draft = await showModalBottomSheet<_DeckDraft>(
@@ -370,6 +379,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     }
   }
 
+  /// Xử lý thao tác confirm delete deck và đồng bộ kết quả với UI.
   Future<void> _confirmDeleteDeck(StudentFlashcardDeck deck) async {
     final colors = StudentThemeScope.colorsOf(context);
     final confirmed = await showDialog<bool>(
@@ -418,6 +428,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     }
   }
 
+  /// Hàm hỗ trợ average progress cho màn hình trong file này.
   double _averageProgress() {
     if (_decks.isEmpty) {
       return 0;
@@ -429,6 +440,7 @@ class _StudentFlashcardDecksPageState extends State<StudentFlashcardDecksPage> {
     return (total / _decks.length) * 100;
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
@@ -449,6 +461,7 @@ class _AsymmetricDeckCard extends StatelessWidget {
   final Color color;
   final VoidCallback? onDelete;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -599,6 +612,7 @@ class _AsymmetricDeckCard extends StatelessWidget {
     );
   }
 
+  /// Tạo giá trị hiển thị icon for deck dùng trong giao diện.
   IconData _iconForDeck(StudentFlashcardDeck deck) {
     final code = deck.codeLabel;
     if (code.startsWith('CS') || code.startsWith('IT')) {
@@ -632,6 +646,7 @@ class _DeckStatTile extends StatelessWidget {
   final String value;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -661,6 +676,7 @@ class _StudyStatItem extends StatelessWidget {
   final int value;
   final Color color;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -686,6 +702,7 @@ class _DeckEmptyState extends StatelessWidget {
 
   final VoidCallback onCreate;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -733,6 +750,7 @@ class _DeckErrorState extends StatelessWidget {
   final String message;
   final Future<void> Function() onRetry;
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -777,12 +795,14 @@ class _CreateDeckSheetState extends State<_CreateDeckSheet> {
   final TextEditingController _titleController = TextEditingController();
   String? _selectedCourseId;
 
+  /// Giải phóng controller, listener hoặc tài nguyên khi widget bị hủy.
   @override
   void dispose() {
     _titleController.dispose();
     super.dispose();
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final colors = StudentThemeScope.colorsOf(context);
@@ -859,6 +879,7 @@ class _CreateDeckSheetState extends State<_CreateDeckSheet> {
     );
   }
 
+  /// Xử lý thao tác submit và đồng bộ kết quả với UI.
   void _submit() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {

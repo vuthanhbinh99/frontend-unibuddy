@@ -48,12 +48,14 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     'webp': 'image/webp',
   };
 
+  /// Khởi tạo state ban đầu và đăng ký dữ liệu/listener cần thiết cho màn hình.
   @override
   void initState() {
     super.initState();
     _syncFromUser();
   }
 
+  /// Đồng bộ state khi widget cha truyền cấu hình mới xuống.
   @override
   void didUpdateWidget(covariant StudentProfileTab oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -63,6 +65,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     }
   }
 
+  /// Hàm hỗ trợ sync from user cho màn hình trong file này.
   void _syncFromUser() {
     _fullName = widget.user.fullName;
     _email = widget.user.email;
@@ -70,6 +73,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     _phone = widget.user.phoneNumber ?? '';
   }
 
+  /// Dựng giao diện cho widget hoặc màn hình hiện tại.
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -374,6 +378,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     );
   }
 
+  /// Dựng phần giao diện build input field cho màn hình hiện tại.
   Widget _buildInputField({
     required String label,
     required String initialValue,
@@ -422,6 +427,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     );
   }
 
+  /// Dựng phần giao diện build info row cho màn hình hiện tại.
   Widget _buildInfoRow(String label, String value) {
     final colors = StudentThemeScope.colorsOf(context);
     return Row(
@@ -443,6 +449,7 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     );
   }
 
+  /// Xử lý sự kiện pick and upload avatar từ người dùng hoặc hệ thống.
   Future<void> _pickAndUploadAvatar() async {
     final l10n = context.l10n;
     final picked = await FilePicker.platform.pickFiles(
@@ -551,12 +558,14 @@ class _StudentProfileTabState extends State<StudentProfileTab> {
     }
   }
 
+  /// Hiển thị hoặc mở phần giao diện show snack cho người dùng.
   void _showSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
+  /// Xử lý thao tác save profile và đồng bộ kết quả với UI.
   Future<void> _saveProfile() async {
     final l10n = context.l10n;
     final nextFullName = _fullName.trim();
