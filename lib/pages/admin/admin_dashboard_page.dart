@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/auth_models.dart';
-import '../../services/api/modules/admin_api_service.dart';
+import '../../services/api/modules/admin/admin_api_service.dart';
 import 'admin_document_moderation_page.dart';
 import 'admin_overview_page.dart';
 import 'admin_schools_page.dart';

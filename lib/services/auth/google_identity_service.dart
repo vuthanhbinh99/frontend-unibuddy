@@ -1,6 +1,6 @@
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../api/api_exception.dart';
+import '../api/core/api_exception.dart';
 
 class GoogleIdentityService {
   GoogleIdentityService({GoogleSignIn? googleSignIn})

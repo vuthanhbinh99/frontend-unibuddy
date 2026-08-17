@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/auth_models.dart';
 import '../../l10n/app_localizations.dart';
-import '../../services/api/api_exception.dart';
-import '../../services/api/modules/auth_api_service.dart';
+import '../../services/api/core/api_exception.dart';
+import '../../services/api/modules/auth/auth_api_service.dart';
 import '../../services/auth/google_identity_service.dart';
 import 'widgets/auth_scaffold.dart';
 

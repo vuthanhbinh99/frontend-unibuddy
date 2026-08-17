@@ -1,3 +1,4 @@
+/// Lỗi API đã được chuẩn hóa để các màn hình UI có thể hiển thị message an toàn.
 class ApiException implements Exception {
   const ApiException({
     required this.code,

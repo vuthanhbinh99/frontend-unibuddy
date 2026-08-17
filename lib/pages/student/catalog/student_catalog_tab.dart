@@ -4,7 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../models/student_course_models.dart';
 import '../../../models/student_grade_models.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../course_management/student_course_management_page.dart';
 import '../flashcards/student_flashcard_decks_page.dart';
 import '../kanban/student_kanban_page.dart';

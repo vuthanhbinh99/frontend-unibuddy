@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/student_deadline_models.dart';
 import '../../../models/student_schedule_models.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../theme/student_theme.dart';
 import '../widgets/student_notification_dropdown.dart';
 part 'student_schedule_controls.dart';

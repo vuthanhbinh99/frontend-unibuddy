@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/auth_models.dart';
-import '../../services/api/modules/system_admin_api_service.dart';
+import '../../services/api/modules/system_admin/system_admin_api_service.dart';
 import 'system_admin_logs_page.dart';
 import 'system_admin_notifications_page.dart';
 import 'system_admin_overview_page.dart';

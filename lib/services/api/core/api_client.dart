@@ -5,6 +5,11 @@ import 'api_exception.dart';
 
 typedef TokenRefreshHandler = Future<bool> Function();
 
+/// Lớp HTTP dùng chung cho toàn bộ module API ở frontend.
+///
+/// File này phụ trách base URL, gắn Bearer token, giải mã envelope trả về từ
+/// backend, và tự refresh/retry một lần khi request bảo vệ bị 401. Các module
+/// nghiệp vụ chỉ nên khai báo endpoint và payload, không tự xử lý HTTP lặp lại.
 class ApiClient {
   ApiClient({http.Client? httpClient, String baseUrl = ApiConfig.baseUrl})
     : _httpClient = httpClient ?? http.Client(),
@@ -17,14 +22,17 @@ class ApiClient {
   TokenRefreshHandler? _tokenRefreshHandler;
   Future<bool>? _tokenRefreshFuture;
 
+  /// Cập nhật access token hiện tại để các request sau tự gắn header Authorization.
   void setAccessToken(String? token) {
     _accessToken = token;
   }
 
+  /// Đăng ký hàm refresh token do app cung cấp; ApiClient sẽ gọi khi request bảo vệ bị 401.
   void setTokenRefreshHandler(TokenRefreshHandler? handler) {
     _tokenRefreshHandler = handler;
   }
 
+  /// Cập nhật ngôn ngữ gửi lên backend qua header Accept-Language.
   void setAcceptLanguageCode(String? languageCode) {
     final normalized = languageCode?.trim();
     _acceptLanguageCode = normalized == null || normalized.isEmpty
@@ -32,14 +40,17 @@ class ApiClient {
         : normalized;
   }
 
+  /// Gửi request GET và trả về phần data trong envelope backend.
   Future<Object?> get(String path, {Map<String, String>? query}) {
     return _send('GET', path, query: query);
   }
 
+  /// Gửi request POST JSON và trả về phần data trong envelope backend.
   Future<Object?> post(String path, {Map<String, Object?>? body}) {
     return _send('POST', path, body: body);
   }
 
+  /// Gửi request multipart khi upload file; vẫn dùng chung cơ chế token và refresh/retry.
   Future<Object?> postMultipart(
     String path, {
     required String fileField,
@@ -93,18 +104,25 @@ class ApiClient {
     }
   }
 
+  /// Gửi request PUT JSON cho các thao tác thay thế dữ liệu.
   Future<Object?> put(String path, {Map<String, Object?>? body}) {
     return _send('PUT', path, body: body);
   }
 
+  /// Gửi request PATCH JSON cho các thao tác cập nhật một phần.
   Future<Object?> patch(String path, {Map<String, Object?>? body}) {
     return _send('PATCH', path, body: body);
   }
 
+  /// Gửi request DELETE, có thể kèm body khi backend cần thêm dữ liệu.
   Future<Object?> delete(String path, {Map<String, Object?>? body}) {
     return _send('DELETE', path, body: body);
   }
 
+  /// Hàm gửi request JSON dùng chung cho GET/POST/PUT/PATCH/DELETE.
+  ///
+  /// Nếu backend trả 401 cho request được phép refresh, hàm này sẽ gọi refresh
+  /// token rồi retry lại đúng request ban đầu một lần.
   Future<Object?> _send(
     String method,
     String path, {
@@ -180,6 +198,7 @@ class ApiClient {
     }
   }
 
+  /// Ghép base URL, path endpoint và query param thành URI hoàn chỉnh.
   Uri _buildUri(String path, Map<String, String>? query) {
     final normalizedBaseUrl = _baseUrl.endsWith('/')
         ? _baseUrl.substring(0, _baseUrl.length - 1)
@@ -190,6 +209,10 @@ class ApiClient {
     ).replace(queryParameters: query);
   }
 
+  /// Giải mã response envelope chuẩn của backend.
+  ///
+  /// Backend thường trả `{ success, data, error }`; UI chỉ nhận `data`, còn lỗi
+  /// được đổi thành `ApiException` để các màn hình bắt và hiển thị.
   Object? _decodeEnvelope(http.Response response) {
     final decoded = response.body.isEmpty
         ? null
@@ -223,6 +246,7 @@ class ApiClient {
     );
   }
 
+  /// Kiểm tra lỗi 401 có đủ điều kiện để refresh token và retry hay không.
   Future<bool> _shouldRefreshAndRetry(
     ApiException error,
     String path, {
@@ -239,6 +263,7 @@ class ApiClient {
     return _refreshAccessToken();
   }
 
+  /// Các endpoint auth/session không được tự refresh để tránh vòng lặp vô hạn.
   bool _isAuthSessionEndpoint(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return normalizedPath == '/auth/login' ||
@@ -249,6 +274,10 @@ class ApiClient {
         normalizedPath.startsWith('/auth/forgot-password');
   }
 
+  /// Chạy refresh token qua handler của app.
+  ///
+  /// Nếu nhiều request cùng hết hạn token, các request sẽ dùng chung một Future
+  /// refresh để tránh gọi `/auth/refresh` nhiều lần làm hỏng refresh-token rotation.
   Future<bool> _refreshAccessToken() {
     final existingRefresh = _tokenRefreshFuture;
     if (existingRefresh != null) {
@@ -262,6 +291,7 @@ class ApiClient {
     return refresh;
   }
 
+  /// Đóng HTTP client khi app/service không còn dùng nữa.
   void close() {
     _httpClient.close();
   }

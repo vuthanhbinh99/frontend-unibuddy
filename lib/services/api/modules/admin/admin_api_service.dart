@@ -1,16 +1,21 @@
-import '../../../models/admin_models.dart';
-import '../api_client.dart';
+import '../../../../models/admin_models.dart';
+import '../../core/api_client.dart';
 
+/// Module API cho các chức năng backend của role `ADMIN`.
+///
+/// Các API quản lý trường, cấu hình học thuật và kiểm duyệt tài liệu để ở đây.
 class AdminApiService {
   AdminApiService(this._apiClient);
 
   final ApiClient _apiClient;
 
+  /// Lấy danh sách trường cho màn quản lý trường của ADMIN.
   Future<List<AdminSchool>> listSchools() async {
     final data = await _apiClient.get('/admin/schools');
     return _asList(data).map((item) => AdminSchool.fromJson(item)).toList();
   }
 
+  /// Tạo trường mới với mã trường và tên trường.
   Future<AdminSchool> createSchool({
     required String code,
     required String name,
@@ -22,6 +27,7 @@ class AdminApiService {
     return AdminSchool.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Cập nhật tên trường theo mã trường.
   Future<AdminSchool> updateSchool({
     required String code,
     required String name,
@@ -33,10 +39,12 @@ class AdminApiService {
     return AdminSchool.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Xóa trường theo mã trường; backend sẽ chặn nếu trường còn dữ liệu liên kết.
   Future<void> deleteSchool(String code) async {
     await _apiClient.delete('/admin/schools/${Uri.encodeComponent(code)}');
   }
 
+  /// Lấy cấu hình học thuật/thang điểm của một trường.
   Future<AdminAcademicRules> getAcademicRules(String code) async {
     final data = await _apiClient.get(
       '/admin/schools/${Uri.encodeComponent(code)}/academic-rules',
@@ -44,6 +52,7 @@ class AdminApiService {
     return AdminAcademicRules.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Cập nhật thang điểm chữ, điểm số và GPA cho trường.
   Future<void> updateScoreScale({
     required String code,
     required List<AdminScoreScaleLevel> levels,
@@ -54,6 +63,7 @@ class AdminApiService {
     );
   }
 
+  /// Cập nhật quy tắc xếp loại học lực cho trường.
   Future<void> updateAcademicStandings({
     required String code,
     required List<AdminAcademicStanding> standings,
@@ -66,6 +76,7 @@ class AdminApiService {
     );
   }
 
+  /// Lấy danh sách báo cáo tài liệu, có thể lọc theo trạng thái.
   Future<List<AdminDocumentReport>> listReports({
     AdminReportStatus? status,
   }) async {
@@ -78,6 +89,7 @@ class AdminApiService {
     ).map((item) => AdminDocumentReport.fromJson(item)).toList();
   }
 
+  /// Lấy chi tiết một báo cáo tài liệu.
   Future<AdminDocumentReport> getReportDetail(String reportId) async {
     final data = await _apiClient.get(
       '/admin/reports/${Uri.encodeComponent(reportId)}',
@@ -85,6 +97,7 @@ class AdminApiService {
     return AdminDocumentReport.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Duyệt báo cáo tài liệu; backend sẽ xử lý ẩn/xóa tài liệu theo nghiệp vụ.
   Future<AdminDocumentReport> approveReport(String reportId) async {
     final data = await _apiClient.post(
       '/admin/reports/${Uri.encodeComponent(reportId)}/approve',
@@ -92,6 +105,7 @@ class AdminApiService {
     return AdminDocumentReport.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Từ chối báo cáo tài liệu và giữ/khôi phục tài liệu theo nghiệp vụ backend.
   Future<AdminDocumentReport> rejectReport(String reportId) async {
     final data = await _apiClient.post(
       '/admin/reports/${Uri.encodeComponent(reportId)}/reject',
@@ -99,6 +113,7 @@ class AdminApiService {
     return AdminDocumentReport.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Tải dữ liệu tổng quan cho dashboard ADMIN từ các API con hiện có.
   Future<AdminDashboardData> loadDashboard() async {
     final schools = await listSchools();
     final pendingReports = await listReports(status: AdminReportStatus.pending);
@@ -117,6 +132,7 @@ class AdminApiService {
     );
   }
 
+  /// Ép response dạng list JSON sang list map để các model admin parse thống nhất.
   List<Map<String, dynamic>> _asList(Object? data) {
     final list = data as List<dynamic>;
     return list.cast<Map<String, dynamic>>();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/admin_models.dart';
-import '../../services/api/api_exception.dart';
-import '../../services/api/modules/admin_api_service.dart';
+import '../../services/api/core/api_exception.dart';
+import '../../services/api/modules/admin/admin_api_service.dart';
 import 'widgets/admin_common.dart';
 
 /// Trang cấu hình quy chế học lực và thang điểm cho một trường.
@@ -176,7 +176,9 @@ class _ScoreScaleSectionState extends State<_ScoreScaleSection> {
     for (final row in _rows) {
       final parsed = row.toModel();
       if (parsed == null) {
-        _showError('Vui lòng nhập đầy đủ và đúng định dạng các mức thang điểm.');
+        _showError(
+          'Vui lòng nhập đầy đủ và đúng định dạng các mức thang điểm.',
+        );
         return;
       }
       levels.add(parsed);
@@ -337,10 +339,7 @@ class _ScoreScaleRowEditor extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           flex: 3,
-          child: _CompactField(
-            controller: row.diemChu,
-            capitalize: true,
-          ),
+          child: _CompactField(controller: row.diemChu, capitalize: true),
         ),
         const SizedBox(width: 8),
         Expanded(flex: 3, child: _CompactField(controller: row.he4)),

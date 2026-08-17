@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/admin_models.dart';
-import '../../services/api/api_exception.dart';
-import '../../services/api/modules/admin_api_service.dart';
+import '../../services/api/core/api_exception.dart';
+import '../../services/api/modules/admin/admin_api_service.dart';
 import 'widgets/admin_common.dart';
 
 class AdminDocumentModerationPage extends StatefulWidget {

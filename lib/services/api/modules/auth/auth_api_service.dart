@@ -1,11 +1,16 @@
-import '../../../models/auth_models.dart';
-import '../api_client.dart';
+import '../../../../models/auth_models.dart';
+import '../../core/api_client.dart';
 
+/// Module API cho các endpoint xác thực nằm dưới `/auth/*`.
+///
+/// Các luồng đăng nhập, Google login, refresh token, logout, đăng ký và quên
+/// mật khẩu để ở đây để dễ tìm hợp đồng liên quan đến phiên đăng nhập.
 class AuthApiService {
   AuthApiService(this._apiClient);
 
   final ApiClient _apiClient;
 
+  /// Đăng nhập bằng email/password qua `/auth/login` và trả về kết quả phiên đăng nhập.
   Future<AuthLoginResult> login({
     required String email,
     required String password,
@@ -27,6 +32,7 @@ class AuthApiService {
     return _parseLoginResult(data);
   }
 
+  /// Đăng nhập bằng Google ID token qua `/auth/google`.
   Future<AuthLoginResult> loginWithGoogle({
     required String idToken,
     String? fcmToken,
@@ -44,11 +50,16 @@ class AuthApiService {
     return _parseLoginResult(data);
   }
 
+  /// Lấy danh sách trường công khai để hiển thị ở màn đăng ký sinh viên.
   Future<List<PublicSchool>> listSchools() async {
     final data = await _apiClient.get('/auth/schools');
     return _asList(data).map((item) => PublicSchool.fromJson(item)).toList();
   }
 
+  /// Parse response đăng nhập.
+  ///
+  /// Backend có thể trả phiên đăng nhập bình thường hoặc yêu cầu đổi mật khẩu
+  /// tạm thời, nên hàm này tách hai trường hợp đó ở một nơi.
   AuthLoginResult _parseLoginResult(Object? data) {
     final payload = data as Map<String, dynamic>;
     if (payload['requiresPasswordChange'] == true) {
@@ -60,6 +71,8 @@ class AuthApiService {
     return AuthenticatedLoginResult(session);
   }
 
+  /// Gọi `/auth/refresh` để đổi access token mới.
+  /// Backend dùng refresh-token rotation nên response mới phải thay cả access token và refresh token.
   Future<AuthSessionTokens> refreshSession({
     required String refreshToken,
     String? fcmToken,
@@ -79,6 +92,7 @@ class AuthApiService {
     return tokens;
   }
 
+  /// Đăng ký tài khoản sinh viên mới qua `/auth/register`.
   Future<RegisterStudentResult> registerStudent({
     required String fullName,
     required String email,
@@ -108,6 +122,7 @@ class AuthApiService {
     return RegisterStudentResult.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Yêu cầu backend gửi mã OTP quên mật khẩu đến email.
   Future<void> requestForgotPasswordCode(String email) async {
     await _apiClient.post(
       '/auth/forgot-password',
@@ -115,6 +130,7 @@ class AuthApiService {
     );
   }
 
+  /// Xác thực OTP quên mật khẩu và nhận reset token tạm thời.
   Future<ResetPasswordToken> verifyForgotPasswordCode({
     required String email,
     required String code,
@@ -127,6 +143,7 @@ class AuthApiService {
     return ResetPasswordToken.fromJson(data as Map<String, dynamic>);
   }
 
+  /// Đặt lại mật khẩu mới bằng reset token đã xác thực.
   Future<void> resetPassword({
     required String resetToken,
     required String newPassword,
@@ -137,6 +154,7 @@ class AuthApiService {
     );
   }
 
+  /// Đăng xuất phiên hiện tại trên backend bằng refresh token.
   Future<void> logout(String refreshToken) async {
     try {
       await _apiClient.post(
@@ -148,15 +166,18 @@ class AuthApiService {
     }
   }
 
+  /// Bỏ các field null/rỗng trước khi gửi body để payload gọn và đúng ý backend.
   Map<String, Object?> _withoutNulls(Map<String, Object?> input) {
     return Map.fromEntries(input.entries.where((entry) => entry.value != null));
   }
 
+  /// Ép response dạng list JSON sang list map để model parser dùng được.
   List<Map<String, dynamic>> _asList(Object? data) {
     final list = data as List<dynamic>;
     return list.cast<Map<String, dynamic>>();
   }
 
+  /// Chuẩn hóa chuỗi rỗng thành null để không gửi field trống lên backend.
   String? _blankToNull(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;

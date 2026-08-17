@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/auth_models.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../../../services/local/frontend_preferences_service.dart';
 import '../../../services/notifications/push_notification_service.dart';
 import '../feedback/student_feedback_screen.dart';

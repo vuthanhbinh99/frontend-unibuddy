@@ -3,9 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../models/auth_models.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../services/api/api_exception.dart';
+import '../../../services/api/core/api_exception.dart';
 import '../../../services/platform/content_resolver.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../theme/student_theme.dart';
 import '../widgets/student_notification_dropdown.dart';
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/admin_models.dart';
-import '../../services/api/api_exception.dart';
-import '../../services/api/modules/admin_api_service.dart';
+import '../../services/api/core/api_exception.dart';
+import '../../services/api/modules/admin/admin_api_service.dart';
 import 'admin_academic_rules_page.dart';
 import 'widgets/admin_common.dart';
 
@@ -128,7 +128,9 @@ class _AdminSchoolsPageState extends State<AdminSchoolsPage> {
     }
 
     await _refresh();
-    _showMessage(school == null ? 'Đã thêm trường mới.' : 'Đã cập nhật trường.');
+    _showMessage(
+      school == null ? 'Đã thêm trường mới.' : 'Đã cập nhật trường.',
+    );
   }
 
   void _openAcademicRules(AdminSchool school) {

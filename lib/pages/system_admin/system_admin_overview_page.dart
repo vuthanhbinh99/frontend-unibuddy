@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/system_admin_models.dart';
-import '../../services/api/api_exception.dart';
-import '../../services/api/modules/system_admin_api_service.dart';
+import '../../services/api/core/api_exception.dart';
+import '../../services/api/modules/system_admin/system_admin_api_service.dart';
 import 'widgets/system_admin_common.dart';
 
 class SystemAdminOverviewPage extends StatefulWidget {

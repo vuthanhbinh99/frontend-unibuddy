@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../models/student_course_models.dart';
 import '../../../models/student_exam_models.dart';
-import '../../../services/api/api_exception.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/core/api_exception.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../theme/student_theme.dart';
 part 'student_exam_management_widgets.dart';
 

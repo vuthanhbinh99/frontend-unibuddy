@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import '../theme/student_theme.dart';
 
 class StudentFeedbackScreen extends StatefulWidget {

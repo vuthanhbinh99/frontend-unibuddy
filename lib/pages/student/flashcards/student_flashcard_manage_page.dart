@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/student_flashcard_models.dart';
-import '../../../services/api/api_exception.dart';
-import '../../../services/api/modules/student_api_service.dart';
+import '../../../services/api/core/api_exception.dart';
+import '../../../services/api/modules/student/student_api_service.dart';
 import 'student_flashcard_editors.dart';
 import '../theme/student_theme.dart';
 
